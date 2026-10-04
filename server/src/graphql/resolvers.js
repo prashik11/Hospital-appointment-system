@@ -268,6 +268,50 @@ const resolvers = {
 
       return appointment;
     },
+
+    updateAppointmentSchedule: async (_, args, context) => {
+      getAuthAdmin(context.req);
+
+      const { appointmentId, appointmentDate, preferredTime, adminNote } = args;
+
+      const appointment = await Appointment.findById(appointmentId);
+
+      if (!appointment) {
+        throw new Error("Appointment not found");
+      }
+
+      // Check if another active appointment already
+      // exists for the same doctor, date and time.
+      const existingAppointment = await Appointment.findOne({
+        _id: { $ne: appointmentId },
+        doctorId: appointment.doctorId,
+        appointmentDate,
+        preferredTime,
+        status: {
+          $in: ["PENDING", "CONFIRMED"],
+        },
+      });
+
+      if (existingAppointment) {
+        throw new Error(
+          "This doctor already has an appointment at this date and time",
+        );
+      }
+
+      appointment.appointmentDate = appointmentDate;
+      appointment.preferredTime = preferredTime;
+
+      if (adminNote !== undefined) {
+        appointment.adminNote = adminNote;
+      }
+
+      await appointment.save();
+
+      return await Appointment.findById(appointmentId)
+        .populate("patientId")
+        .populate("doctorId")
+        .populate("departmentId");
+    },
   },
 };
 

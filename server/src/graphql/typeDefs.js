@@ -105,6 +105,13 @@ type LoginResponse {
   status: AppointmentStatus!
   adminNote: String
 ): Appointment!
+
+updateAppointmentSchedule(
+  appointmentId: ID!
+  appointmentDate: String!
+  preferredTime: String!
+  adminNote: String
+): Appointment!
   }
 `;
 

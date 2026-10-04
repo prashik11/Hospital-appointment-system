@@ -1,6 +1,9 @@
 import { useQuery, useMutation } from "@apollo/client/react";
 import { GET_APPOINTMENTS } from "../graphql/queries";
-import { UPDATE_APPOINTMENT_STATUS } from "../graphql/mutations";
+import {
+  UPDATE_APPOINTMENT_STATUS,
+  UPDATE_APPOINTMENT_SCHEDULE,
+} from "../graphql/mutations";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
@@ -28,6 +31,9 @@ function AdminAppointments() {
   const navigate = useNavigate();
   const [updateAppointmentStatus, { loading: updating }] = useMutation(
     UPDATE_APPOINTMENT_STATUS,
+  );
+  const [updateAppointmentSchedule, { loading: rescheduling }] = useMutation(
+    UPDATE_APPOINTMENT_SCHEDULE,
   );
   const [notes, setNotes] = useState({});
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -74,6 +80,15 @@ function AdminAppointments() {
           (appointment) => appointment.status === statusFilter,
         );
 
+  const getStatusCount = (status) => {
+    if (status === "ALL") {
+      return appointments.length;
+    }
+
+    return appointments.filter((appointment) => appointment.status === status)
+      .length;
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("adminToken");
     localStorage.removeItem("adminData");
@@ -115,7 +130,7 @@ function AdminAppointments() {
                     : "bg-white text-gray-700 shadow-sm hover:bg-gray-100"
                 }`}
               >
-                {status}
+                {status === "ALL" ? "All" : status} ({getStatusCount(status)})
               </button>
             ),
           )}
