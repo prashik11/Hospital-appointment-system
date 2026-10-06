@@ -35,6 +35,7 @@ function Appointment() {
     useMutation(CREATE_APPOINTMENT);
 
   const [successData, setSuccessData] = useState(null);
+  const [bookingError, setBookingError] = useState("");
 
   const departments = departmentsData?.departments || [];
 
@@ -65,6 +66,7 @@ function Appointment() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setBookingError("");
 
     try {
       const result = await createAppointment({
@@ -81,11 +83,16 @@ function Appointment() {
         },
       });
 
-      setSuccessData(result.data.createAppointment);
+      const appointment = result.data?.createAppointment;
+      if (!appointment) {
+        throw new Error("The server did not return the booked appointment.");
+      }
 
-      console.log("Appointment created:", result.data.createAppointment);
+      setSuccessData(appointment);
+
     } catch (error) {
       console.error("Appointment booking failed:", error);
+      setBookingError(error.message || "Unable to book the appointment. Please try again.");
     }
   };
 
@@ -109,54 +116,66 @@ function Appointment() {
           </div>
 
           {successData && (
-            <div className="mb-8 rounded-2xl bg-green-50 p-8 shadow-sm">
-              <h2 className="text-2xl font-bold text-green-700">
-                Appointment Submitted Successfully
-              </h2>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="presentation">
+              <section role="dialog" aria-modal="true" aria-labelledby="appointment-success-title" className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-8 shadow-lg">
+              <div className="text-center">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-3xl">
+                  ✓
+                </div>
 
-              <p className="mt-3 text-gray-700">
-                Your appointment request has been submitted.
-              </p>
+                <h2 id="appointment-success-title" className="mt-5 text-3xl font-bold text-green-700">
+                  Appointment Submitted
+                </h2>
 
-              <div className="mt-6 space-y-2">
-                <p>
-                  <strong>Appointment No:</strong>{" "}
-                  {successData.appointmentNumber}
-                </p>
-
-                <p>
-                  <strong>Patient:</strong> {successData.patient.name}
-                </p>
-
-                <p>
-                  <strong>Doctor:</strong> {successData.doctor.name}
-                </p>
-
-                <p>
-                  <strong>Department:</strong> {successData.department.name}
-                </p>
-
-                <p>
-                  <strong>Date:</strong> {successData.appointmentDate}
-                </p>
-
-                <p>
-                  <strong>Preferred Time:</strong> {successData.preferredTime}
-                </p>
-
-                <p>
-                  <strong>Status:</strong> {successData.status}
+                <p className="mt-3 text-gray-600">
+                  Your appointment request has been successfully submitted.
                 </p>
               </div>
 
-              <p className="mt-6 text-gray-600">
+              <div className="mt-8 space-y-4 rounded-xl bg-gray-50 p-5">
+                <div>
+                  <p className="text-sm text-gray-500">Appointment Number</p>
+
+                  <p className="font-bold">{successData.appointmentNumber}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-500">Patient</p>
+
+                  <p className="font-semibold">{successData.patient.name}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-500">Doctor</p>
+
+                  <p className="font-semibold">{successData.doctor.name}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-500">Date</p>
+
+                  <p className="font-semibold">{successData.appointmentDate}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-500">Preferred Time</p>
+
+                  <p className="font-semibold">{successData.preferredTime}</p>
+                </div>
+              </div>
+
+              <div className="mt-6 rounded-xl bg-blue-50 p-4 text-sm text-blue-800">
                 Our hospital representative will contact you on your registered
                 mobile number to confirm the appointment.
-              </p>
+              </div>
+              <button type="button" onClick={() => setSuccessData(null)} className="mt-6 w-full rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700">
+                Close
+              </button>
+              </section>
             </div>
           )}
 
-          <form
+          {!successData && <form
             onSubmit={handleSubmit}
             className="mt-10 rounded-2xl bg-white p-8 shadow-sm"
           >
@@ -342,9 +361,9 @@ function Appointment() {
               </div>
             </div>
 
-            {submitError && (
-              <div className="mt-6 rounded-lg bg-red-50 p-4 text-red-700">
-                {submitError.message}
+            {(bookingError || submitError) && (
+              <div role="alert" className="mt-6 rounded-lg bg-red-50 p-4 text-red-700">
+                {bookingError || submitError.message}
               </div>
             )}
 
@@ -359,7 +378,7 @@ function Appointment() {
                   : "Submit Appointment"}
               </button>
             </div>
-          </form>
+          </form>}
         </div>
       </main>
     </>

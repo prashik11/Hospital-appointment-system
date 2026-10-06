@@ -10,6 +10,7 @@ const Admin = require("../models/Admin");
 const { generateToken } = require("../utils/auth");
 
 const { getAuthAdmin } = require("../middleware/auth");
+const { randomBytes } = require("node:crypto");
 
 const resolvers = {
   Query: {
@@ -74,7 +75,8 @@ const resolvers = {
         admin,
       };
     },
-    createDepartment: async (_, args) => {
+    createDepartment: async (_, args, context) => {
+      getAuthAdmin(context.req);
       const { name, description } = args;
 
       const existingDepartment = await Department.findOne({
@@ -93,7 +95,8 @@ const resolvers = {
       return department;
     },
 
-    createDoctor: async (_, args) => {
+    createDoctor: async (_, args, context) => {
+      getAuthAdmin(context.req);
       const {
         name,
         qualification,
@@ -137,7 +140,18 @@ const resolvers = {
         throw new Error("Please enter a valid 10-digit mobile number");
       }
 
-      // 2. Validate department
+      // 2. Validate appointment date and time
+      const selectedDate = new Date(`${appointmentDate}T${preferredTime}:00`);
+
+      if (Number.isNaN(selectedDate.getTime())) {
+        throw new Error("Invalid appointment date or time");
+      }
+
+      if (selectedDate < new Date()) {
+        throw new Error("Appointment date and time cannot be in the past");
+      }
+
+      // 3. Validate department
       const department = await Department.findOne({
         _id: departmentId,
         isActive: true,
@@ -147,7 +161,7 @@ const resolvers = {
         throw new Error("Department not found or inactive");
       }
 
-      // 3. Validate doctor
+      // 4. Validate doctor
       const doctor = await Doctor.findOne({
         _id: doctorId,
         isActive: true,
@@ -157,75 +171,28 @@ const resolvers = {
         throw new Error("Doctor not found or inactive");
       }
 
-      // 4. Check doctor belongs to selected department
-      if (doctor.departmentId.toString() !== departmentId.toString()) {
-        throw new Error(
-          "Selected doctor does not belong to selected department",
-        );
+      if (doctor.departmentId.toString() !== departmentId) {
+        throw new Error("Selected doctor does not belong to this department");
       }
 
-      // 5. Check whether this doctor already has an appointment
-      // for the same date and time
-      const existingAppointment = await Appointment.findOne({
-        doctorId,
-        appointmentDate,
-        preferredTime,
-        status: {
-          $in: ["PENDING", "CONFIRMED"],
-        },
-      });
-
-      if (existingAppointment) {
-        throw new Error("This time slot is already booked for this doctor");
-      }
-
-      // 6. Find existing patient
-      let patient = await Patient.findOne({
-        mobile,
+      const patient = await Patient.create({
         name: name.trim(),
+        mobile: mobile.trim(),
+        age,
+        gender,
       });
 
-      // 7. Create patient if not found
-      if (!patient) {
-        patient = await Patient.create({
-          name: name.trim(),
-          mobile: mobile.trim(),
-          age,
-          gender,
-        });
-      }
-
-      // 8. Generate appointment number
-      const datePart = appointmentDate.replace(/-/g, "");
-
-      const randomPart = Math.floor(100000 + Math.random() * 900000);
-
-      const appointmentNumber = `HSP-${datePart}-${randomPart}`;
-
-      // 9. Create appointment
       const appointment = await Appointment.create({
-        appointmentNumber,
+        appointmentNumber: `APT-${Date.now()}-${randomBytes(3).toString("hex").toUpperCase()}`,
         patientId: patient._id,
-        doctorId,
-        departmentId,
+        doctorId: doctor._id,
+        departmentId: department._id,
         appointmentDate,
         preferredTime,
-        reason: reason?.trim(),
-        status: "PENDING",
+        reason: reason?.trim() || undefined,
       });
 
-      // 10. Return populated appointment
-      await appointment.populate([
-        {
-          path: "patientId",
-        },
-        {
-          path: "doctorId",
-        },
-        {
-          path: "departmentId",
-        },
-      ]);
+      await appointment.populate(["patientId", "doctorId", "departmentId"]);
 
       return appointment;
     },
@@ -274,19 +241,46 @@ const resolvers = {
 
       const { appointmentId, appointmentDate, preferredTime, adminNote } = args;
 
+      if (!appointmentDate) {
+        throw new Error("Appointment date is required");
+      }
+
+      if (!preferredTime) {
+        throw new Error("Preferred time is required");
+      }
+
+      const selectedDate = new Date(`${appointmentDate}T${preferredTime}:00`);
+
+      if (Number.isNaN(selectedDate.getTime())) {
+        throw new Error("Invalid appointment date or time");
+      }
+
+      if (selectedDate < new Date()) {
+        throw new Error("Appointment date and time cannot be in the past");
+      }
+
       const appointment = await Appointment.findById(appointmentId);
 
       if (!appointment) {
         throw new Error("Appointment not found");
       }
 
-      // Check if another active appointment already
-      // exists for the same doctor, date and time.
+      if (
+        appointment.status === "CANCELLED" ||
+        appointment.status === "COMPLETED"
+      ) {
+        throw new Error("This appointment cannot be rescheduled");
+      }
+
       const existingAppointment = await Appointment.findOne({
         _id: { $ne: appointmentId },
+
         doctorId: appointment.doctorId,
+
         appointmentDate,
+
         preferredTime,
+
         status: {
           $in: ["PENDING", "CONFIRMED"],
         },
@@ -299,11 +293,10 @@ const resolvers = {
       }
 
       appointment.appointmentDate = appointmentDate;
+
       appointment.preferredTime = preferredTime;
 
-      if (adminNote !== undefined) {
-        appointment.adminNote = adminNote;
-      }
+      appointment.adminNote = adminNote || "Appointment rescheduled by admin";
 
       await appointment.save();
 

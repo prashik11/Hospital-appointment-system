@@ -44,12 +44,7 @@ const appointmentSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: [
-        "PENDING",
-        "CONFIRMED",
-        "CANCELLED",
-        "COMPLETED",
-      ],
+      enum: ["PENDING", "CONFIRMED", "CANCELLED", "COMPLETED"],
       default: "PENDING",
     },
 
@@ -58,9 +53,28 @@ const appointmentSchema = new mongoose.Schema(
       trim: true,
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true },
 );
+
+// MongoDB indexes
+
+appointmentSchema.index({
+  doctorId: 1,
+  appointmentDate: 1,
+  preferredTime: 1,
+  status: 1,
+});
+
+appointmentSchema.index({
+  patientId: 1,
+});
+
+appointmentSchema.index({
+  appointmentDate: 1,
+});
+
+appointmentSchema.index({
+  status: 1,
+});
 
 module.exports = mongoose.model("Appointment", appointmentSchema);

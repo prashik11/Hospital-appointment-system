@@ -10,6 +10,8 @@ import Appointment from "./pages/Appointment";
 import AdminAppointments from "./pages/AdminAppointments";
 import AdminLogin from "./pages/AdminLogin";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminManagement from "./pages/AdminManagement";
+import NotFound from "./pages/NotFound";
 
 function Home() {
   return (
@@ -40,11 +42,13 @@ function App() {
           element={
             <ProtectedRoute>
               <AdminAppointments />
+              <AdminManagement />
             </ProtectedRoute>
           }
         />
 
         <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );
