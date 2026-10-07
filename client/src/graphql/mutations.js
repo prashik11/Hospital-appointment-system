@@ -81,3 +81,63 @@ export const LOGIN_ADMIN = gql`
     }
   }
 `;
+
+export const UPDATE_APPOINTMENT_SCHEDULE = gql`
+  mutation UpdateAppointmentSchedule(
+    $appointmentId: ID!
+    $appointmentDate: String!
+    $preferredTime: String!
+    $adminNote: String
+  ) {
+    updateAppointmentSchedule(
+      appointmentId: $appointmentId
+      appointmentDate: $appointmentDate
+      preferredTime: $preferredTime
+      adminNote: $adminNote
+    ) {
+      id
+      appointmentNumber
+      appointmentDate
+      preferredTime
+      status
+      adminNote
+    }
+  }
+`;
+
+export const CREATE_DEPARTMENT = gql`
+  mutation CreateDepartment($name: String!, $description: String) {
+    createDepartment(name: $name, description: $description) {
+      id
+      name
+      description
+      isActive
+    }
+  }
+`;
+
+export const CREATE_DOCTOR = gql`
+  mutation CreateDoctor(
+    $name: String!
+    $qualification: String
+    $specialization: String!
+    $departmentId: ID!
+    $consultationFee: Float
+  ) {
+    createDoctor(
+      name: $name
+      qualification: $qualification
+      specialization: $specialization
+      departmentId: $departmentId
+      consultationFee: $consultationFee
+    ) {
+      id
+      name
+      qualification
+      specialization
+      departmentId
+      consultationFee
+      isActive
+    }
+  }
+`;
