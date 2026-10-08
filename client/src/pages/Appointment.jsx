@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation } from "@apollo/client/react";
 
 import Navbar from "../components/Navbar";
@@ -7,6 +8,7 @@ import { GET_DEPARTMENTS, GET_DOCTORS } from "../graphql/queries";
 import { CREATE_APPOINTMENT } from "../graphql/mutations";
 
 function Appointment() {
+  const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({
     name: "",
     mobile: "",
@@ -43,6 +45,19 @@ function Appointment() {
   const filteredDoctors = doctors.filter(
     (doctor) => doctor.departmentId === formData.departmentId,
   );
+
+  useEffect(() => {
+    const requestedName = searchParams.get("doctor")?.trim().toLowerCase();
+    if (!requestedName || !doctors.length) return;
+    const selectedDoctor = doctors.find((doctor) => doctor.name.toLowerCase() === requestedName);
+    if (selectedDoctor) {
+      setFormData((previous) => ({
+        ...previous,
+        departmentId: selectedDoctor.departmentId,
+        doctorId: selectedDoctor.id,
+      }));
+    }
+  }, [doctors, searchParams]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;

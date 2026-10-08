@@ -57,15 +57,15 @@ const typeDefs = `#graphql
 }
 
 type LoginResponse {
-  token: String!
   admin: Admin!
 }
 
   type Query {
     hello: String
+    me: Admin
     departments: [Department!]!
     doctors: [Doctor!]!
-    appointments: [Appointment!]!
+    appointments(limit: Int = 100, offset: Int = 0): [Appointment!]!
   }
 
   type Mutation {
@@ -74,6 +74,9 @@ type LoginResponse {
   email: String!
   password: String!
 ): LoginResponse!
+
+    logoutAdmin: Boolean!
+    changeAdminPassword(currentPassword: String!, newPassword: String!): Boolean!
 
     createDepartment(
       name: String!

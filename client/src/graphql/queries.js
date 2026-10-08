@@ -26,8 +26,8 @@ export const GET_DOCTORS = gql`
 `;
 
 export const GET_APPOINTMENTS = gql`
-  query GetAppointments {
-    appointments {
+  query GetAppointments($limit: Int!, $offset: Int!) {
+    appointments(limit: $limit, offset: $offset) {
       id
       appointmentNumber
       appointmentDate
@@ -55,6 +55,17 @@ export const GET_APPOINTMENTS = gql`
         id
         name
       }
+    }
+  }
+`;
+
+export const GET_CURRENT_ADMIN = gql`
+  query GetCurrentAdmin {
+    me {
+      id
+      name
+      email
+      role
     }
   }
 `;

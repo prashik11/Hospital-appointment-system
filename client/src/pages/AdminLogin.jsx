@@ -27,21 +27,16 @@ function AdminLogin() {
     event.preventDefault();
 
     try {
-      const result = await loginAdmin({
+      await loginAdmin({
         variables: {
           email: formData.email,
           password: formData.password,
         },
       });
 
-      const token = result.data.loginAdmin.token;
-
-      localStorage.setItem("adminToken", token);
-
-      localStorage.setItem(
-        "adminData",
-        JSON.stringify(result.data.loginAdmin.admin),
-      );
+      // Remove credentials written by older builds before switching to cookies.
+      localStorage.removeItem("adminToken");
+      localStorage.removeItem("adminData");
 
       navigate("/admin/appointments");
     } catch (error) {
@@ -53,7 +48,8 @@ function AdminLogin() {
     <main className="flex min-h-screen items-center justify-center bg-gray-50 px-6">
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
         <div className="text-center">
-          <p className="font-semibold text-blue-600">CITYCARE HOSPITAL</p>
+          <img src="/logo.svg" alt="Shree Pharma and Clinic logo" className="mx-auto mb-3 h-20 w-20" />
+          <p className="font-semibold text-blue-600">Shree Pharma and Clinic</p>
 
           <h1 className="mt-2 text-3xl font-bold">Admin Login</h1>
 

@@ -6,17 +6,20 @@ const doctorSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      maxlength: 100,
     },
 
     qualification: {
       type: String,
       trim: true,
+      maxlength: 100,
     },
 
     specialization: {
       type: String,
       required: true,
       trim: true,
+      maxlength: 100,
     },
 
     departmentId: {
@@ -28,6 +31,7 @@ const doctorSchema = new mongoose.Schema(
     consultationFee: {
       type: Number,
       default: 0,
+      min: 0,
     },
 
     isActive: {

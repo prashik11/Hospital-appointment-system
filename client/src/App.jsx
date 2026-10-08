@@ -4,6 +4,7 @@ import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import Services from "./components/Services";
 import Departments from "./components/Departments";
+import Doctors from "./components/Doctors";
 import Footer from "./components/Footer";
 
 import Appointment from "./pages/Appointment";
@@ -22,6 +23,7 @@ function Home() {
       <main>
         <Hero />
         <Services />
+        <Doctors />
         <Departments />
       </main>
 
