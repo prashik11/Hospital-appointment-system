@@ -3,6 +3,7 @@ import { GET_APPOINTMENTS } from "../graphql/queries";
 import {
   UPDATE_APPOINTMENT_STATUS,
   UPDATE_APPOINTMENT_SCHEDULE,
+  LOGOUT_ADMIN,
 } from "../graphql/mutations";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
@@ -28,7 +29,10 @@ function getStatusClasses(status) {
 }
 
 function AdminAppointments() {
-  const { loading, error, data, refetch } = useQuery(GET_APPOINTMENTS);
+  const [hasMore, setHasMore] = useState(true);
+  const { loading, error, data, refetch, fetchMore } = useQuery(GET_APPOINTMENTS, {
+    variables: { limit: 100, offset: 0 },
+  });
 
   const navigate = useNavigate();
 
@@ -39,8 +43,11 @@ function AdminAppointments() {
   const [updateAppointmentSchedule, { loading: rescheduling }] = useMutation(
     UPDATE_APPOINTMENT_SCHEDULE,
   );
+  const [logoutAdmin] = useMutation(LOGOUT_ADMIN);
 
   const [notes, setNotes] = useState({});
+  const [logoutError, setLogoutError] = useState("");
+  const [loadingMore, setLoadingMore] = useState(false);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState("");
@@ -63,6 +70,7 @@ function AdminAppointments() {
       });
 
       await refetch();
+      setHasMore(true);
 
       setNotes((previousNotes) => ({
         ...previousNotes,
@@ -85,6 +93,7 @@ function AdminAppointments() {
       });
 
       await refetch();
+      setHasMore(true);
 
       setRescheduleId(null);
 
@@ -97,11 +106,16 @@ function AdminAppointments() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminData");
-
-    navigate("/admin/login");
+  const handleLogout = async () => {
+    try {
+      await logoutAdmin();
+      localStorage.removeItem("adminToken");
+      localStorage.removeItem("adminData");
+      navigate("/admin/login");
+    } catch (error) {
+      console.error("Admin logout failed:", error);
+      setLogoutError("Could not end the admin session. Please try again.");
+    }
   };
 
   if (loading) {
@@ -118,6 +132,27 @@ function AdminAppointments() {
   }
 
   const appointments = data?.appointments || [];
+
+  const handleLoadMore = async () => {
+    setLoadingMore(true);
+    try {
+      const result = await fetchMore({
+        variables: { limit: 100, offset: appointments.length },
+        updateQuery(previous, { fetchMoreResult }) {
+          if (!fetchMoreResult) return previous;
+          return {
+            ...previous,
+            appointments: [...previous.appointments, ...fetchMoreResult.appointments],
+          };
+        },
+      });
+      setHasMore(result.data.appointments.length === 100);
+    } catch (loadError) {
+      console.error("Loading more appointments failed:", loadError);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const totalAppointments = appointments.length;
 
@@ -197,9 +232,15 @@ function AdminAppointments() {
           </div>
         </div>
 
+        {logoutError && (
+          <p role="alert" className="mb-6 rounded-lg bg-red-50 p-3 text-red-700">
+            {logoutError}
+          </p>
+        )}
+
         <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <div className="rounded-xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">Total</p>
+            <p className="text-sm text-gray-500">Loaded</p>
 
             <h2 className="mt-2 text-3xl font-bold">{totalAppointments}</h2>
           </div>
@@ -521,6 +562,19 @@ function AdminAppointments() {
             <div className="p-10 text-center text-gray-500">
               No {statusFilter === "ALL" ? "" : statusFilter.toLowerCase()}{" "}
               appointments found.
+            </div>
+          )}
+
+          {hasMore && appointments.length > 0 && appointments.length % 100 === 0 && (
+            <div className="border-t p-5 text-center">
+              <button
+                type="button"
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-700 disabled:bg-gray-400"
+              >
+                {loadingMore ? "Loading..." : "Load more appointments"}
+              </button>
             </div>
           )}
         </div>

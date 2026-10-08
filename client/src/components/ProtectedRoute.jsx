@@ -1,9 +1,17 @@
 import { Navigate } from "react-router-dom";
+import { useQuery } from "@apollo/client/react";
+import { GET_CURRENT_ADMIN } from "../graphql/queries";
 
 function ProtectedRoute({ children }) {
-  const token = localStorage.getItem("adminToken");
+  const { loading, data, error } = useQuery(GET_CURRENT_ADMIN, {
+    fetchPolicy: "network-only",
+  });
 
-  if (!token) {
+  if (loading) {
+    return <div className="p-10 text-center">Checking admin session...</div>;
+  }
+
+  if (error || !data?.me) {
     return <Navigate to="/admin/login" replace />;
   }
 

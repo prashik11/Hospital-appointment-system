@@ -4,8 +4,6 @@ dotenv.config();
 
 const dns = require("node:dns");
 
-console.log("DNS_SERVERS:", process.env.DNS_SERVERS);
-
 dns.setDefaultResultOrder("ipv4first");
 
 if (process.env.DNS_SERVERS) {
@@ -21,6 +19,15 @@ const Admin = require("../models/Admin");
 
 async function createAdmin() {
   try {
+    const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+    const password = process.env.ADMIN_PASSWORD;
+    if (!process.env.MONGO_URI || !email || !password) {
+      throw new Error("MONGO_URI, ADMIN_EMAIL, and ADMIN_PASSWORD must be configured");
+    }
+    if (password.length < 12 || Buffer.byteLength(password, "utf8") > 72) {
+      throw new Error("ADMIN_PASSWORD must be between 12 and 72 characters");
+    }
+
     console.log("Connecting to MongoDB...");
 
     await mongoose.connect(process.env.MONGO_URI);
@@ -28,7 +35,7 @@ async function createAdmin() {
     console.log("MongoDB connected");
 
     const existingAdmin = await Admin.findOne({
-      email: process.env.ADMIN_EMAIL,
+      email,
     });
 
     if (existingAdmin) {
@@ -36,11 +43,11 @@ async function createAdmin() {
       process.exit(0);
     }
 
-    const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 12);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     await Admin.create({
-      name: "CityCare Admin",
-      email: process.env.ADMIN_EMAIL,
+      name: "Shree Pharma and Clinic Admin",
+      email,
       password: hashedPassword,
       role: "ADMIN",
     });
@@ -49,8 +56,7 @@ async function createAdmin() {
 
     process.exit(0);
   } catch (error) {
-    console.error("Admin creation failed:");
-    console.error(error);
+    console.error("Admin creation failed; check the required environment settings and database connectivity.");
 
     process.exit(1);
   }

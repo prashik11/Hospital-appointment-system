@@ -70,8 +70,6 @@ export const UPDATE_APPOINTMENT_STATUS = gql`
 export const LOGIN_ADMIN = gql`
   mutation LoginAdmin($email: String!, $password: String!) {
     loginAdmin(email: $email, password: $password) {
-      token
-
       admin {
         id
         name
@@ -79,6 +77,18 @@ export const LOGIN_ADMIN = gql`
         role
       }
     }
+  }
+`;
+
+export const LOGOUT_ADMIN = gql`
+  mutation LogoutAdmin {
+    logoutAdmin
+  }
+`;
+
+export const CHANGE_ADMIN_PASSWORD = gql`
+  mutation ChangeAdminPassword($currentPassword: String!, $newPassword: String!) {
+    changeAdminPassword(currentPassword: $currentPassword, newPassword: $newPassword)
   }
 `;
 
