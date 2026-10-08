@@ -6,18 +6,20 @@ const patientSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      maxlength: 100,
     },
 
     mobile: {
       type: String,
       required: true,
       trim: true,
+      match: /^[6-9]\d{9}$/,
     },
 
     age: {
       type: Number,
       required: true,
-      min: 0,
+      min: 1,
       max: 120,
     },
 

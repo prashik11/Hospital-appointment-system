@@ -1,4 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Shree Pharma and Clinic</title>
   <circle cx="256" cy="256" r="244" fill="#fff" stroke="#171717" stroke-width="3"/>
   <path fill="#171717" d="M226 112h60v112h112v64H286v112h-60V288H114v-64h112z"/>
   <circle cx="260" cy="148" r="35" fill="#078b85" stroke="#fff" stroke-width="9"/>

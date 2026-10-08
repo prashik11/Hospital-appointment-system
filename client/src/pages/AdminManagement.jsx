@@ -1,11 +1,17 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@apollo/client/react";
+import { useNavigate } from "react-router-dom";
 
 import { GET_DEPARTMENTS, GET_DOCTORS } from "../graphql/queries";
 
-import { CREATE_DEPARTMENT, CREATE_DOCTOR } from "../graphql/mutations";
+import {
+  CREATE_DEPARTMENT,
+  CREATE_DOCTOR,
+  CHANGE_ADMIN_PASSWORD,
+} from "../graphql/mutations";
 
 function AdminManagement() {
+  const navigate = useNavigate();
   const { data: departmentData, refetch: refetchDepartments } =
     useQuery(GET_DEPARTMENTS);
 
@@ -16,6 +22,8 @@ function AdminManagement() {
 
   const [createDoctor, { loading: creatingDoctor }] =
     useMutation(CREATE_DOCTOR);
+  const [changeAdminPassword, { loading: changingPassword, error: passwordError }] =
+    useMutation(CHANGE_ADMIN_PASSWORD);
 
   const [department, setDepartment] = useState({
     name: "",
@@ -29,6 +37,7 @@ function AdminManagement() {
     departmentId: "",
     consultationFee: "",
   });
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
 
   const handleDepartmentSubmit = async (event) => {
     event.preventDefault();
@@ -89,6 +98,17 @@ function AdminManagement() {
     }
   };
 
+  const handlePasswordChange = async (event) => {
+    event.preventDefault();
+    try {
+      await changeAdminPassword({ variables: passwordForm });
+      setPasswordForm({ currentPassword: "", newPassword: "" });
+      navigate("/admin/login", { replace: true });
+    } catch {
+      // The mutation error is rendered below without logging credentials.
+    }
+  };
+
   const departments = departmentData?.departments || [];
 
   const doctors = doctorData?.doctors || [];
@@ -97,6 +117,45 @@ function AdminManagement() {
     <main className="min-h-screen bg-gray-50 py-10">
       <div className="mx-auto max-w-6xl px-6">
         <h1 className="mb-8 text-3xl font-bold">Hospital Management</h1>
+
+        <section className="mb-8 rounded-xl bg-white p-6 shadow-sm">
+          <h2 className="mb-2 text-xl font-bold">Change Admin Password</h2>
+          <p className="mb-5 text-sm text-gray-600">
+            Use at least 12 characters. Changing it signs out all active admin sessions.
+          </p>
+          <form onSubmit={handlePasswordChange} className="grid gap-4 md:grid-cols-3">
+            <input
+              type="password"
+              autoComplete="current-password"
+              placeholder="Current password"
+              value={passwordForm.currentPassword}
+              onChange={(event) => setPasswordForm((previous) => ({ ...previous, currentPassword: event.target.value }))}
+              required
+              className="rounded-lg border px-4 py-3"
+            />
+            <input
+              type="password"
+              autoComplete="new-password"
+              placeholder="New password (12+ characters)"
+              value={passwordForm.newPassword}
+              onChange={(event) => setPasswordForm((previous) => ({ ...previous, newPassword: event.target.value }))}
+              minLength={12}
+              maxLength={72}
+              required
+              className="rounded-lg border px-4 py-3"
+            />
+            <button
+              type="submit"
+              disabled={changingPassword}
+              className="rounded-lg bg-red-600 px-4 py-3 font-semibold text-white disabled:bg-gray-400"
+            >
+              {changingPassword ? "Updating..." : "Change Password"}
+            </button>
+          </form>
+          {passwordError && (
+            <p role="alert" className="mt-4 text-sm text-red-700">{passwordError.message}</p>
+          )}
+        </section>
 
         {/* DEPARTMENT */}
 

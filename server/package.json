@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "diagnose:slots": "node src/utils/diagnoseSlots.js",
+    "seed:doctors": "node src/utils/seedDoctors.js"
   },
   "keywords": [],
   "author": "",
@@ -19,7 +21,6 @@
     "dotenv": "^18.0.1",
     "express": "^5.2.1",
     "graphql": "^16.14.2",
-    "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.6.0",
     "mongoose": "^9.10.1"
   },

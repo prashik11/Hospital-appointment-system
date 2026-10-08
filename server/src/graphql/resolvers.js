@@ -4,19 +4,32 @@ const Patient = require("../models/Patient");
 const Appointment = require("../models/Appointment");
 
 const bcrypt = require("bcryptjs");
-
+const { GraphQLError } = require("graphql");
 const Admin = require("../models/Admin");
 
-const { generateToken } = require("../utils/auth");
-
-const { getAuthAdmin } = require("../middleware/auth");
+const {
+  createAdminSession,
+  revokeAdminSession,
+  revokeAllAdminSessions,
+  getAuthAdmin,
+} = require("../middleware/auth");
 const { randomBytes } = require("node:crypto");
+const { consumeRateLimit } = require("../utils/rateLimit");
+const { validateText, validateAppointmentDateTime, validateObjectId, userInputError } = require("../utils/validation");
+
+function rateLimitError() {
+  return new GraphQLError("Too many requests. Please try again later.", {
+    extensions: { code: "TOO_MANY_REQUESTS" },
+  });
+}
 
 const resolvers = {
   Query: {
     hello: () => {
       return "Hospital Appointment API is working!";
     },
+
+    me: async (_, __, context) => getAuthAdmin(context.req),
 
     departments: async () => {
       return await Department.find({ isActive: true }).sort({
@@ -30,8 +43,8 @@ const resolvers = {
       });
     },
 
-    appointments: async (_, __, context) => {
-      getAuthAdmin(context.req);
+    appointments: async (_, { limit = 100, offset = 0 }, context) => {
+      await getAuthAdmin(context.req);
 
       return await Appointment.find()
         .populate("patientId")
@@ -39,7 +52,10 @@ const resolvers = {
         .populate("departmentId")
         .sort({
           createdAt: -1,
-        });
+          _id: -1,
+        })
+        .limit(Math.min(Math.max(Number(limit) || 100, 1), 100))
+        .skip(Math.min(Math.max(Number(offset) || 0, 0), 50_000));
     },
   },
 
@@ -50,53 +66,106 @@ const resolvers = {
   },
 
   Mutation: {
-    loginAdmin: async (_, args) => {
+    // ==========================================
+    // ADMIN LOGIN
+    // ==========================================
+    loginAdmin: async (_, args, context) => {
       const { email, password } = args;
+      const normalizedEmail = email.trim().toLowerCase();
+      if (normalizedEmail.length > 254 || typeof password !== "string" || Buffer.byteLength(password, "utf8") > 72) {
+        throw new GraphQLError("Invalid email or password", { extensions: { code: "UNAUTHENTICATED" } });
+      }
+      const clientIp = context.req.ip || "unknown";
+      const attempt = consumeRateLimit(`admin-login:${clientIp}:${normalizedEmail}`, {
+        limit: 5,
+        windowMs: 15 * 60 * 1000,
+      });
+      const ipAttempt = consumeRateLimit(`admin-login-ip:${clientIp}`, {
+        limit: 20,
+        windowMs: 15 * 60 * 1000,
+      });
+      if (!attempt.allowed || !ipAttempt.allowed) {
+        throw rateLimitError();
+      }
 
       const admin = await Admin.findOne({
-        email: email.trim().toLowerCase(),
+        email: normalizedEmail,
         isActive: true,
-      });
+      }).select("+password");
 
-      if (!admin) {
-        throw new Error("Invalid email or password");
+      const passwordMatches = admin
+        ? await bcrypt.compare(password, admin.password)
+        : await bcrypt.compare(password, "$2a$12$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy");
+      if (!admin || !passwordMatches) {
+        throw new GraphQLError("Invalid email or password", { extensions: { code: "UNAUTHENTICATED" } });
       }
 
-      const passwordMatches = await bcrypt.compare(password, admin.password);
-
-      if (!passwordMatches) {
-        throw new Error("Invalid email or password");
-      }
-
-      const token = generateToken(admin);
+      await createAdminSession(admin, context.res);
 
       return {
-        token,
         admin,
       };
     },
+
+    logoutAdmin: async (_, __, context) => {
+      await revokeAdminSession(context.req, context.res);
+      return true;
+    },
+
+    changeAdminPassword: async (_, { currentPassword, newPassword }, context) => {
+      const authenticatedAdmin = await getAuthAdmin(context.req);
+      if (
+        typeof newPassword !== "string" ||
+        newPassword.length < 12 ||
+        Buffer.byteLength(newPassword, "utf8") > 72
+      ) {
+        throw userInputError("New password must be at least 12 characters and at most 72 UTF-8 bytes");
+      }
+
+      const admin = await Admin.findById(authenticatedAdmin._id).select("+password");
+      if (!admin || !(await bcrypt.compare(currentPassword, admin.password))) {
+        throw userInputError("Current password is incorrect");
+      }
+
+      admin.password = await bcrypt.hash(newPassword, 12);
+      await admin.save();
+      await revokeAllAdminSessions(admin._id, context.req, context.res);
+      return true;
+    },
+
+    // ==========================================
+    // CREATE DEPARTMENT
+    // ADMIN ONLY
+    // ==========================================
     createDepartment: async (_, args, context) => {
-      getAuthAdmin(context.req);
-      const { name, description } = args;
+      await getAuthAdmin(context.req);
+
+      const name = validateText(args.name, "Department name", { max: 80 });
+      const description = validateText(args.description || "", "Description", { required: false, max: 500 });
 
       const existingDepartment = await Department.findOne({
-        name: name.trim(),
+        name,
       });
 
       if (existingDepartment) {
-        throw new Error("Department already exists");
+        throw userInputError("Department already exists");
       }
 
       const department = await Department.create({
         name: name.trim(),
-        description: description?.trim(),
+        description: description || undefined,
       });
 
       return department;
     },
 
+    // ==========================================
+    // CREATE DOCTOR
+    // ADMIN ONLY
+    // ==========================================
     createDoctor: async (_, args, context) => {
-      getAuthAdmin(context.req);
+      await getAuthAdmin(context.req);
+
       const {
         name,
         qualification,
@@ -105,16 +174,26 @@ const resolvers = {
         consultationFee,
       } = args;
 
-      const department = await Department.findById(departmentId);
+      const cleanName = validateText(name, "Doctor name", { max: 100 });
+      const cleanQualification = validateText(qualification || "", "Qualification", { required: false, max: 100 });
+      const cleanSpecialization = validateText(specialization, "Specialization", { max: 100 });
+      if (consultationFee != null && (!Number.isFinite(consultationFee) || consultationFee < 0)) {
+        throw userInputError("Consultation fee must be a non-negative number");
+      }
+
+      const department = await Department.findOne({
+        _id: validateObjectId(departmentId, "Department ID"),
+        isActive: true,
+      });
 
       if (!department) {
-        throw new Error("Department not found");
+        throw userInputError("Department not found or inactive");
       }
 
       const doctor = await Doctor.create({
-        name: name.trim(),
-        qualification: qualification?.trim(),
-        specialization: specialization.trim(),
+        name: cleanName,
+        qualification: cleanQualification || undefined,
+        specialization: cleanSpecialization,
         departmentId,
         consultationFee: consultationFee || 0,
       });
@@ -122,7 +201,11 @@ const resolvers = {
       return doctor;
     },
 
-    createAppointment: async (_, args) => {
+    // ==========================================
+    // CREATE APPOINTMENT
+    // PUBLIC
+    // ==========================================
+    createAppointment: async (_, args, context) => {
       const {
         name,
         mobile,
@@ -135,92 +218,185 @@ const resolvers = {
         reason,
       } = args;
 
+      // ------------------------------------------
       // 1. Validate mobile number
-      if (!/^[6-9]\d{9}$/.test(mobile)) {
-        throw new Error("Please enter a valid 10-digit mobile number");
+      // ------------------------------------------
+      const patientName = validateText(name, "Name", { max: 100 });
+      const normalizedMobile = validateText(mobile, "Mobile number", { max: 10 });
+      const cleanReason = validateText(reason || "", "Reason", { required: false, max: 1000 });
+      if (!/^[6-9]\d{9}$/.test(normalizedMobile)) {
+        throw userInputError("Please enter a valid 10-digit mobile number");
+      }
+      if (!Number.isInteger(age) || age < 1 || age > 120) {
+        throw userInputError("Age must be a whole number between 1 and 120");
+      }
+      if (!["MALE", "FEMALE", "OTHER"].includes(gender)) {
+        throw userInputError("Please select a valid gender");
       }
 
-      // 2. Validate appointment date and time
-      const selectedDate = new Date(`${appointmentDate}T${preferredTime}:00`);
+      validateAppointmentDateTime(appointmentDate, preferredTime);
 
-      if (Number.isNaN(selectedDate.getTime())) {
-        throw new Error("Invalid appointment date or time");
+      const bookingRate = consumeRateLimit(`appointment:${context.req.ip || "unknown"}`, {
+        limit: 5,
+        windowMs: 15 * 60 * 1000,
+      });
+      if (!bookingRate.allowed) {
+        throw rateLimitError();
       }
 
-      if (selectedDate < new Date()) {
-        throw new Error("Appointment date and time cannot be in the past");
-      }
-
+      // ------------------------------------------
       // 3. Validate department
+      // ------------------------------------------
       const department = await Department.findOne({
-        _id: departmentId,
+        _id: validateObjectId(departmentId, "Department ID"),
         isActive: true,
       });
 
       if (!department) {
-        throw new Error("Department not found or inactive");
+        throw userInputError("Department not found or inactive");
       }
 
+      // ------------------------------------------
       // 4. Validate doctor
+      // ------------------------------------------
       const doctor = await Doctor.findOne({
-        _id: doctorId,
+        _id: validateObjectId(doctorId, "Doctor ID"),
         isActive: true,
       });
 
       if (!doctor) {
-        throw new Error("Doctor not found or inactive");
+        throw userInputError("Doctor not found or inactive");
       }
 
-      if (doctor.departmentId.toString() !== departmentId) {
-        throw new Error("Selected doctor does not belong to this department");
+      // ------------------------------------------
+      // 5. Check doctor belongs to department
+      // ------------------------------------------
+      if (doctor.departmentId.toString() !== departmentId.toString()) {
+        throw userInputError("Selected doctor does not belong to this department");
       }
 
+      // ------------------------------------------
+      // 6. Check duplicate doctor slot
+      // ------------------------------------------
+      const existingAppointment = await Appointment.findOne({
+        doctorId,
+        appointmentDate,
+        preferredTime,
+        status: {
+          $in: ["PENDING", "CONFIRMED"],
+        },
+      });
+
+      if (existingAppointment) {
+        throw userInputError("This time slot is already booked for this doctor");
+      }
+
+      // ------------------------------------------
+      // 7. Create patient
+      // ------------------------------------------
       const patient = await Patient.create({
-        name: name.trim(),
-        mobile: mobile.trim(),
+        name: patientName,
+        mobile: normalizedMobile,
         age,
         gender,
       });
 
-      const appointment = await Appointment.create({
-        appointmentNumber: `APT-${Date.now()}-${randomBytes(3).toString("hex").toUpperCase()}`,
-        patientId: patient._id,
-        doctorId: doctor._id,
-        departmentId: department._id,
-        appointmentDate,
-        preferredTime,
-        reason: reason?.trim() || undefined,
-      });
+      // ------------------------------------------
+      // 8. Generate appointment number
+      // ------------------------------------------
+      const appointmentNumber = `APT-${Date.now()}-${randomBytes(3)
+        .toString("hex")
+        .toUpperCase()}`;
 
+      // ------------------------------------------
+      // 9. Create appointment
+      // ------------------------------------------
+      let appointment;
+      try {
+        appointment = await Appointment.create({
+          appointmentNumber,
+          patientId: patient._id,
+          doctorId: doctor._id,
+          departmentId: department._id,
+          appointmentDate,
+          preferredTime,
+          reason: cleanReason || undefined,
+          status: "PENDING",
+        });
+      } catch (error) {
+        await Patient.deleteOne({ _id: patient._id });
+        if (error.code === 11000) {
+          throw userInputError("This time slot is already booked for this doctor");
+        }
+        throw error;
+      }
+
+      // ------------------------------------------
+      // 10. Populate appointment
+      // ------------------------------------------
       await appointment.populate(["patientId", "doctorId", "departmentId"]);
 
       return appointment;
     },
 
+    // ==========================================
+    // UPDATE APPOINTMENT STATUS
+    // ADMIN ONLY
+    // ==========================================
     updateAppointmentStatus: async (_, args, context) => {
-      getAuthAdmin(context.req);
+      await getAuthAdmin(context.req);
 
       const { appointmentId, status, adminNote } = args;
+      validateObjectId(appointmentId, "Appointment ID");
 
+      // ------------------------------------------
       // 1. Find appointment
+      // ------------------------------------------
       const appointment = await Appointment.findById(appointmentId);
 
       if (!appointment) {
-        throw new Error("Appointment not found");
+        throw userInputError("Appointment not found");
       }
 
-      // 2. Update status
+      // ------------------------------------------
+      // 2. Allowed status transitions
+      // ------------------------------------------
+      const allowedTransitions = {
+        PENDING: ["CONFIRMED", "CANCELLED"],
+
+        CONFIRMED: ["COMPLETED", "CANCELLED"],
+
+        CANCELLED: [],
+
+        COMPLETED: [],
+      };
+
+      if (!allowedTransitions[appointment.status].includes(status)) {
+        throw userInputError(
+          `Cannot change appointment from ${appointment.status} to ${status}`,
+        );
+      }
+
+      // ------------------------------------------
+      // 3. Update status
+      // ------------------------------------------
       appointment.status = status;
 
-      // 3. Update admin note if provided
-      if (adminNote !== undefined) {
-        appointment.adminNote = adminNote.trim();
+      // ------------------------------------------
+      // 4. Update admin note
+      // ------------------------------------------
+      if (adminNote != null) {
+        appointment.adminNote = validateText(adminNote, "Admin note", { required: false, max: 1000 });
       }
 
-      // 4. Save changes
+      // ------------------------------------------
+      // 5. Save
+      // ------------------------------------------
       await appointment.save();
 
-      // 5. Populate related data
+      // ------------------------------------------
+      // 6. Populate
+      // ------------------------------------------
       await appointment.populate([
         {
           path: "patientId",
@@ -236,44 +412,44 @@ const resolvers = {
       return appointment;
     },
 
+    // ==========================================
+    // RESCHEDULE APPOINTMENT
+    // ADMIN ONLY
+    // ==========================================
     updateAppointmentSchedule: async (_, args, context) => {
-      getAuthAdmin(context.req);
+      await getAuthAdmin(context.req);
 
       const { appointmentId, appointmentDate, preferredTime, adminNote } = args;
+      validateObjectId(appointmentId, "Appointment ID");
 
-      if (!appointmentDate) {
-        throw new Error("Appointment date is required");
-      }
+      validateAppointmentDateTime(appointmentDate, preferredTime);
 
-      if (!preferredTime) {
-        throw new Error("Preferred time is required");
-      }
-
-      const selectedDate = new Date(`${appointmentDate}T${preferredTime}:00`);
-
-      if (Number.isNaN(selectedDate.getTime())) {
-        throw new Error("Invalid appointment date or time");
-      }
-
-      if (selectedDate < new Date()) {
-        throw new Error("Appointment date and time cannot be in the past");
-      }
-
+      // ------------------------------------------
+      // 4. Find appointment
+      // ------------------------------------------
       const appointment = await Appointment.findById(appointmentId);
 
       if (!appointment) {
-        throw new Error("Appointment not found");
+        throw userInputError("Appointment not found");
       }
 
+      // ------------------------------------------
+      // 5. Check status
+      // ------------------------------------------
       if (
         appointment.status === "CANCELLED" ||
         appointment.status === "COMPLETED"
       ) {
-        throw new Error("This appointment cannot be rescheduled");
+        throw userInputError("This appointment cannot be rescheduled");
       }
 
+      // ------------------------------------------
+      // 6. Check duplicate slot
+      // ------------------------------------------
       const existingAppointment = await Appointment.findOne({
-        _id: { $ne: appointmentId },
+        _id: {
+          $ne: appointmentId,
+        },
 
         doctorId: appointment.doctorId,
 
@@ -287,19 +463,45 @@ const resolvers = {
       });
 
       if (existingAppointment) {
-        throw new Error(
+        throw userInputError(
           "This doctor already has an appointment at this date and time",
         );
       }
 
+      // ------------------------------------------
+      // 7. Update date
+      // ------------------------------------------
       appointment.appointmentDate = appointmentDate;
 
+      // ------------------------------------------
+      // 8. Update time
+      // ------------------------------------------
       appointment.preferredTime = preferredTime;
 
-      appointment.adminNote = adminNote || "Appointment rescheduled by admin";
+      // ------------------------------------------
+      // 9. Update admin note
+      // ------------------------------------------
+      appointment.adminNote = validateText(
+        adminNote || "Appointment rescheduled by admin",
+        "Admin note",
+        { max: 1000 },
+      );
 
-      await appointment.save();
+      // ------------------------------------------
+      // 10. Save
+      // ------------------------------------------
+      try {
+        await appointment.save();
+      } catch (error) {
+        if (error.code === 11000) {
+          throw userInputError("This doctor already has an appointment at this date and time");
+        }
+        throw error;
+      }
 
+      // ------------------------------------------
+      // 11. Return populated appointment
+      // ------------------------------------------
       return await Appointment.findById(appointmentId)
         .populate("patientId")
         .populate("doctorId")

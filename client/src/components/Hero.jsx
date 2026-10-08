@@ -19,7 +19,7 @@ function Hero() {
 
           <p className="mt-6 max-w-xl text-lg text-gray-600">
             Get access to experienced doctors and
-            reliable healthcare services at CityCare Hospital.
+            reliable healthcare services at Shree Pharma and Clinic.
           </p>
 
           <a
@@ -33,12 +33,9 @@ function Hero() {
         <div className="rounded-2xl bg-white p-10 shadow-lg">
           <div className="text-center">
 
-            <div className="text-6xl">
-              🏥
-            </div>
-
+            <img src="/logo.svg" alt="Shree Pharma and Clinic logo" className="mx-auto h-40 w-40" />
             <h3 className="mt-5 text-2xl font-bold">
-              CityCare Hospital
+              Shree Pharma and Clinic
             </h3>
 
             <p className="mt-3 text-gray-600">
