@@ -9,9 +9,10 @@ import Footer from "./components/Footer";
 import Appointment from "./pages/Appointment";
 import AdminAppointments from "./pages/AdminAppointments";
 import AdminLogin from "./pages/AdminLogin";
-import ProtectedRoute from "./components/ProtectedRoute";
 import AdminManagement from "./pages/AdminManagement";
 import NotFound from "./pages/NotFound";
+
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function Home() {
   return (
@@ -33,21 +34,36 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public Home */}
         <Route path="/" element={<Home />} />
 
+        {/* Public Appointment */}
         <Route path="/appointment" element={<Appointment />} />
 
+        {/* Admin Login */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+
+        {/* Admin Appointments */}
         <Route
           path="/admin/appointments"
           element={
             <ProtectedRoute>
               <AdminAppointments />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Admin Management */}
+        <Route
+          path="/admin/management"
+          element={
+            <ProtectedRoute>
               <AdminManagement />
             </ProtectedRoute>
           }
         />
 
-        <Route path="/admin/login" element={<AdminLogin />} />
+        {/* 404 */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
