@@ -1,6 +1,7 @@
 export const doctorProfiles = [
   {
     name: "Dr. Abhishek Sapkal",
+    image: "/doctors/dr-abhishek-sapkal.jpeg",
     qualification: "MBBS — General Medicine (Russia)",
     specialization: "General Medicine",
     department: "General Medicine",
@@ -14,6 +15,7 @@ export const doctorProfiles = [
   },
   {
     name: "Dr. Prashant Jalak",
+    image: "/doctors/dr-prashant-jalak.jpeg",
     qualification: "MBBS, MD (Neuropsychiatry); Fellowship in De-addiction, JJ Hospital, Mumbai",
     specialization: "Neuropsychiatry & De-addiction",
     department: "Neuropsychiatry",
@@ -21,6 +23,7 @@ export const doctorProfiles = [
   },
   {
     name: "Dr. Ishan Gajbe",
+    image: "/doctors/dr-ishan-gajbe.jpeg",
     qualification: "MBBS, MD — Orthopaedic Surgeon",
     specialization: "Orthopaedics & Joint Replacement",
     department: "Orthopaedics",
@@ -28,6 +31,7 @@ export const doctorProfiles = [
   },
   {
     name: "Dr. Sanket Nale",
+    image: "/doctors/dr-sanket-nale.jpeg",
     qualification: "MBBS, MD — Paediatric Cardiologist",
     specialization: "Paediatrics & Paediatric Cardiology",
     department: "Paediatrics",
@@ -35,6 +39,7 @@ export const doctorProfiles = [
   },
   {
     name: "Dr. Sanket Kamble",
+    image: "/doctors/dr-sanket-kamble.jpeg",
     qualification: "MBBS, MD; Fellowship in 2-D Echo",
     specialization: "General Medicine",
     department: "General Medicine",
@@ -42,6 +47,7 @@ export const doctorProfiles = [
   },
   {
     name: "Dr. Amol Chinde",
+    image: "/doctors/dr-amol-chinde.jpeg",
     qualification: "MBBS, MD — Dermatology, Venereology & Leprosy",
     specialization: "Dermatology, Hair & Skin",
     department: "Dermatology",
@@ -49,6 +55,7 @@ export const doctorProfiles = [
   },
   {
     name: "Dr. Vasudev Pise",
+    image: "/doctors/dr-vasudev-pise.jpeg",
     qualification: "MBBS, MS — General & Laparoscopic Surgeon",
     specialization: "General & Laparoscopic Surgery",
     department: "General Surgery",
@@ -56,6 +63,7 @@ export const doctorProfiles = [
   },
   {
     name: "Dr. Harshada Magar",
+    image: "/doctors/dr-harshada-magar.jpeg",
     qualification: "MBBS, MS — ENT Specialist",
     specialization: "Ear, Nose & Throat (ENT)",
     department: "ENT",

@@ -6,7 +6,7 @@ function Hero() {
     >
       <div className="mx-auto grid max-w-7xl items-center gap-10 px-6 py-20 md:grid-cols-2">
 
-        <div>
+        <div className="hero-copy">
           <p className="mb-3 font-semibold text-blue-600">
             YOUR HEALTH, OUR PRIORITY
           </p>
@@ -24,16 +24,16 @@ function Hero() {
 
           <a
             href="/appointment"
-            className="mt-8 inline-block rounded-lg bg-blue-600 px-7 py-3 font-semibold text-white hover:bg-blue-700"
+            className="interactive-button mt-8 inline-block rounded-lg bg-blue-600 px-7 py-3 font-semibold text-white hover:bg-blue-700"
           >
             Book an Appointment
           </a>
         </div>
 
-        <div className="rounded-2xl bg-white p-10 shadow-lg">
+        <div className="hero-card rounded-2xl bg-white p-10 shadow-lg">
           <div className="text-center">
 
-            <img src="/logo.svg" alt="Shree Pharma and Clinic logo" className="mx-auto h-40 w-40" />
+            <img src="/logo.svg" alt="Shree Pharma and Clinic logo" className="hero-logo mx-auto h-40 w-40" />
             <h3 className="mt-5 text-2xl font-bold">
               Shree Pharma and Clinic
             </h3>

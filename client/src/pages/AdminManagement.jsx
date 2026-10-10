@@ -114,11 +114,24 @@ function AdminManagement() {
   const doctors = doctorData?.doctors || [];
 
   return (
-    <main className="min-h-screen bg-gray-50 py-10">
-      <div className="mx-auto max-w-6xl px-6">
-        <h1 className="mb-8 text-3xl font-bold">Hospital Management</h1>
+    <main className="admin-page min-h-screen py-10">
+      <div className="admin-content mx-auto max-w-6xl px-6">
+        <div className="admin-page-header mb-8 flex items-center justify-between gap-4">
+          <div>
+            <p className="font-semibold text-blue-700">ADMIN PANEL</p>
+            <h1 className="mt-2 text-3xl font-bold text-gray-900">Clinic Management</h1>
+            <p className="mt-2 text-gray-600">Manage departments, doctors and account security.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate("/admin/appointments")}
+            className="interactive-button rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white hover:bg-blue-800"
+          >
+            Appointments
+          </button>
+        </div>
 
-        <section className="mb-8 rounded-xl bg-white p-6 shadow-sm">
+        <section className="admin-section-card mb-8 rounded-2xl bg-white p-6 shadow-sm">
           <h2 className="mb-2 text-xl font-bold">Change Admin Password</h2>
           <p className="mb-5 text-sm text-gray-600">
             Use at least 12 characters. Changing it signs out all active admin sessions.
@@ -159,7 +172,7 @@ function AdminManagement() {
 
         {/* DEPARTMENT */}
 
-        <section className="mb-8 rounded-xl bg-white p-6 shadow-sm">
+        <section className="admin-section-card mb-8 rounded-2xl bg-white p-6 shadow-sm">
           <h2 className="mb-5 text-xl font-bold">Add Department</h2>
 
           <form
@@ -205,7 +218,7 @@ function AdminManagement() {
 
         {/* DOCTOR */}
 
-        <section className="mb-8 rounded-xl bg-white p-6 shadow-sm">
+        <section className="admin-section-card mb-8 rounded-2xl bg-white p-6 shadow-sm">
           <h2 className="mb-5 text-xl font-bold">Add Doctor</h2>
 
           <form
@@ -299,7 +312,7 @@ function AdminManagement() {
 
         {/* LIST */}
 
-        <section className="rounded-xl bg-white p-6 shadow-sm">
+        <section className="admin-section-card rounded-2xl bg-white p-6 shadow-sm">
           <h2 className="mb-5 text-xl font-bold">Doctors</h2>
 
           <div className="space-y-3">
@@ -309,7 +322,7 @@ function AdminManagement() {
               );
 
               return (
-                <div key={doctor.id} className="rounded-lg border p-4">
+                <div key={doctor.id} className="admin-doctor-row rounded-xl border p-4">
                   <p className="font-semibold">{doctor.name}</p>
 
                   <p className="text-sm text-gray-500">
