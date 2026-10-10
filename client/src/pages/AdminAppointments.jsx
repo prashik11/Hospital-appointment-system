@@ -201,10 +201,10 @@ function AdminAppointments() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 py-10">
-      <div className="mx-auto max-w-7xl px-6">
+    <main className="admin-page min-h-screen py-10">
+      <div className="admin-content mx-auto max-w-7xl px-6">
         {/* HEADER */}
-        <div className="mb-8 flex items-center justify-between">
+        <div className="admin-page-header mb-8 flex items-center justify-between">
           <div>
             <p className="font-semibold text-blue-600">ADMIN PANEL</p>
 
@@ -218,14 +218,14 @@ function AdminAppointments() {
           <div className="flex gap-3">
             <button
               onClick={() => navigate("/admin/management")}
-              className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700"
+              className="interactive-button rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white hover:bg-blue-800"
             >
               Management
             </button>
 
             <button
               onClick={handleLogout}
-              className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700"
+              className="interactive-button rounded-lg bg-white px-4 py-2 font-semibold text-red-700 shadow-sm ring-1 ring-red-200 hover:bg-red-50"
             >
               Logout
             </button>
@@ -238,39 +238,39 @@ function AdminAppointments() {
           </p>
         )}
 
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="rounded-xl bg-white p-5 shadow-sm">
+        <div className="admin-stats-grid mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="admin-metric-card rounded-xl bg-white p-5 shadow-sm">
             <p className="text-sm text-gray-500">Loaded</p>
 
             <h2 className="mt-2 text-3xl font-bold">{totalAppointments}</h2>
           </div>
 
-          <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="admin-metric-card rounded-xl bg-white p-5 shadow-sm">
             <p className="text-sm text-gray-500">Pending</p>
 
             <h2 className="mt-2 text-3xl font-bold">{pendingAppointments}</h2>
           </div>
 
-          <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="admin-metric-card rounded-xl bg-white p-5 shadow-sm">
             <p className="text-sm text-gray-500">Confirmed</p>
 
             <h2 className="mt-2 text-3xl font-bold">{confirmedAppointments}</h2>
           </div>
 
-          <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="admin-metric-card rounded-xl bg-white p-5 shadow-sm">
             <p className="text-sm text-gray-500">Cancelled</p>
 
             <h2 className="mt-2 text-3xl font-bold">{cancelledAppointments}</h2>
           </div>
 
-          <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="admin-metric-card rounded-xl bg-white p-5 shadow-sm">
             <p className="text-sm text-gray-500">Completed</p>
 
             <h2 className="mt-2 text-3xl font-bold">{completedAppointments}</h2>
           </div>
         </div>
 
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row">
+        <div className="admin-toolbar mb-6 flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm sm:flex-row">
           <input
             type="text"
             value={search}
@@ -298,21 +298,15 @@ function AdminAppointments() {
           </button>
         </div>
 
-        <input
-          type="tel"
-          maxLength={10}
-          pattern="[6-9][0-9]{9}"
-          inputMode="numeric"
-        />
-
         {/* STATUS FILTERS */}
-        <div className="mb-6 flex flex-wrap gap-3">
+        <div className="admin-status-filters mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {["ALL", "PENDING", "CONFIRMED", "CANCELLED", "COMPLETED"].map(
             (status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
-                className={`rounded-lg px-4 py-2 font-semibold ${
+                aria-pressed={statusFilter === status}
+                className={`admin-filter-pill rounded-lg px-4 py-2 font-semibold ${
                   statusFilter === status
                     ? "bg-blue-600 text-white"
                     : "bg-white text-gray-700 shadow-sm hover:bg-gray-100"
@@ -325,9 +319,20 @@ function AdminAppointments() {
         </div>
 
         {/* APPOINTMENT TABLE */}
-        <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
-          <table className="min-w-full">
-            <thead className="bg-gray-100">
+        <div className="admin-table-shell overflow-x-auto rounded-2xl bg-white shadow-sm">
+          <table className="admin-table">
+            <colgroup>
+              <col style={{ width: "150px" }} />
+              <col style={{ width: "210px" }} />
+              <col style={{ width: "180px" }} />
+              <col style={{ width: "130px" }} />
+              <col style={{ width: "100px" }} />
+              <col style={{ width: "190px" }} />
+              <col style={{ width: "170px" }} />
+              <col style={{ width: "160px" }} />
+              <col style={{ width: "380px" }} />
+            </colgroup>
+            <thead className="admin-table-head">
               <tr>
                 <th className="px-4 py-4 text-left">Appointment</th>
 
@@ -351,7 +356,7 @@ function AdminAppointments() {
 
             <tbody>
               {filteredAppointments.map((appointment) => (
-                <tr key={appointment.id} className="border-t">
+                <tr key={appointment.id} className="admin-table-row border-t">
                   {/* APPOINTMENT NUMBER */}
                   <td className="px-4 py-4 font-semibold">
                     {appointment.appointmentNumber}
@@ -403,7 +408,7 @@ function AdminAppointments() {
                   {/* STATUS */}
                   <td className="px-4 py-4">
                     <span
-                      className={`rounded-full px-3 py-1 text-sm font-medium ${getStatusClasses(
+                      className={`inline-flex whitespace-nowrap rounded-full px-3 py-1 text-sm font-medium ${getStatusClasses(
                         appointment.status,
                       )}`}
                     >

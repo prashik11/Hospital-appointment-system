@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("node:path");
 const cors = require("cors");
 const dotenv = require("dotenv");
 dotenv.config();
@@ -28,8 +29,9 @@ if (process.env.DNS_SERVERS) {
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const CLIENT_BUILD_DIR = path.resolve(__dirname, "../../client/dist");
 const isProduction = process.env.NODE_ENV === "production";
-const configuredOrigins = (process.env.CLIENT_ORIGIN || (isProduction ? "" : "http://localhost:5173"))
+const configuredOrigins = (process.env.CLIENT_ORIGIN || process.env.RENDER_EXTERNAL_URL || (isProduction ? "" : "http://localhost:5173"))
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
@@ -37,8 +39,8 @@ const allowedOrigins = new Set(configuredOrigins.map((origin) => new URL(origin)
 
 function validateConfiguration() {
   if (!process.env.MONGO_URI) throw new Error("MONGO_URI must be configured");
-  if (isProduction && !process.env.CLIENT_ORIGIN) {
-    throw new Error("CLIENT_ORIGIN must be configured in production");
+  if (isProduction && !process.env.CLIENT_ORIGIN && !process.env.RENDER_EXTERNAL_URL) {
+    throw new Error("CLIENT_ORIGIN or RENDER_EXTERNAL_URL must be configured in production");
   }
   if (isProduction && configuredOrigins.some((origin) => !origin.startsWith("https://"))) {
     throw new Error("Production CLIENT_ORIGIN values must use HTTPS");
@@ -164,11 +166,20 @@ async function startServer() {
     }),
   );
 
-  app.get("/", (req, res) => {
+  app.get("/healthz", (req, res) => {
     res.json({ message: "Hospital Appointment API is running" });
   });
 
-  app.listen(PORT, () => {
+  // Serve the Vite production build from the same origin as GraphQL so the
+  // admin session cookie remains first-party in browsers.
+  app.use(express.static(CLIENT_BUILD_DIR));
+  app.get("/{*path}", (req, res, next) => {
+    res.sendFile(path.join(CLIENT_BUILD_DIR, "index.html"), (error) => {
+      if (error) next(error);
+    });
+  });
+
+  app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);
     console.log("GraphQL endpoint is ready");
   });

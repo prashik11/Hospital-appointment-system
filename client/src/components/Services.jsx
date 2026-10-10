@@ -1,3 +1,5 @@
+import Reveal from "./Reveal";
+
 function Services() {
   const services = [
     {
@@ -36,10 +38,12 @@ function Services() {
 
         <div className="mt-12 grid gap-6 md:grid-cols-3">
 
-          {services.map((service) => (
-            <div
+          {services.map((service, index) => (
+            <Reveal
               key={service.title}
-              className="rounded-xl border bg-white p-7 shadow-sm"
+              as="article"
+              delay={index * 90}
+              className="card-lift rounded-xl border bg-white p-7 shadow-sm"
             >
               <h3 className="text-xl font-bold">
                 {service.title}
@@ -48,7 +52,7 @@ function Services() {
               <p className="mt-3 text-gray-600">
                 {service.description}
               </p>
-            </div>
+            </Reveal>
           ))}
 
         </div>
