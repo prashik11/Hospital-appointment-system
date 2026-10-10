@@ -45,48 +45,62 @@ function AdminLogin() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-6">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
+    <main className="admin-login-page flex min-h-screen items-center justify-center px-4 py-12 sm:px-6">
+      <div className="admin-login-card w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl sm:p-10">
         <div className="text-center">
-          <img src="/logo.svg" alt="Shree Pharma and Clinic logo" className="mx-auto mb-3 h-20 w-20" />
-          <p className="font-semibold text-blue-600">Shree Pharma and Clinic</p>
+          <div className="admin-login-logo mx-auto mb-5 grid h-24 w-24 place-items-center rounded-3xl">
+            <img src="/logo.svg" alt="Shree Pharma and Clinic logo" className="h-20 w-20" />
+          </div>
+          <p className="text-sm font-bold uppercase tracking-[0.12em] text-blue-700">
+            Shree Pharma and Clinic
+          </p>
 
-          <h1 className="mt-2 text-3xl font-bold">Admin Login</h1>
+          <h1 className="mt-3 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+            Admin Login
+          </h1>
 
-          <p className="mt-2 text-gray-600">Login to manage appointments</p>
+          <p className="mt-2 text-gray-600">Sign in to manage appointments</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+        <form onSubmit={handleSubmit} className="mt-9 space-y-5">
           <div>
-            <label className="mb-2 block font-medium">Email</label>
+            <label htmlFor="admin-email" className="mb-2 block text-sm font-semibold text-gray-700">
+              Email address
+            </label>
 
             <input
+              id="admin-email"
               type="email"
               name="email"
+              autoComplete="username"
               value={formData.email}
               onChange={handleChange}
               placeholder="Enter admin email"
               required
-              className="w-full rounded-lg border px-4 py-3 outline-none focus:border-blue-600"
+              className="admin-login-input w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-gray-900 outline-none placeholder:text-gray-400 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-100"
             />
           </div>
 
           <div>
-            <label className="mb-2 block font-medium">Password</label>
+            <label htmlFor="admin-password" className="mb-2 block text-sm font-semibold text-gray-700">
+              Password
+            </label>
 
             <input
+              id="admin-password"
               type="password"
               name="password"
+              autoComplete="current-password"
               value={formData.password}
               onChange={handleChange}
               placeholder="Enter password"
               required
-              className="w-full rounded-lg border px-4 py-3 outline-none focus:border-blue-600"
+              className="admin-login-input w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-gray-900 outline-none placeholder:text-gray-400 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-100"
             />
           </div>
 
           {error && (
-            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+            <div role="alert" className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-700">
               {error.message}
             </div>
           )}
@@ -94,11 +108,18 @@ function AdminLogin() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+            className="interactive-button mt-1 w-full rounded-xl bg-blue-700 px-6 py-3.5 font-semibold text-white shadow-sm hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-gray-400"
           >
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
+
+        <div className="mt-7 flex items-center justify-between gap-3 border-t border-gray-100 pt-5 text-sm">
+          <span className="text-gray-500">Authorized staff only</span>
+          <a href="/" className="font-semibold text-blue-700 transition-colors hover:text-blue-900">
+            Back to home
+          </a>
+        </div>
       </div>
     </main>
   );

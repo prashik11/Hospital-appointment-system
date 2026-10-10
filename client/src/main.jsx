@@ -6,6 +6,7 @@ import App from "./App.jsx";
 import client from "./graphql/client.js";
 
 import "./index.css";
+import "./App.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

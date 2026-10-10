@@ -1,4 +1,5 @@
 import { doctorProfiles } from "../data/doctors";
+import Reveal from "./Reveal";
 
 function initials(name) {
   return name
@@ -23,15 +24,28 @@ function Doctors() {
         </div>
 
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {doctorProfiles.map((doctor) => (
-            <article key={doctor.name} className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+          {doctorProfiles.map((doctor, index) => (
+            <Reveal
+              as="article"
+              key={doctor.name}
+              delay={(index % 3) * 90}
+              className="card-lift overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm"
+            >
               <div className="flex items-center gap-4 bg-blue-50 p-6">
-                <div
-                  aria-label={`${doctor.name} photo placeholder`}
-                  className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-4 border-white bg-teal-700 text-xl font-bold text-white shadow-sm"
-                >
-                  {initials(doctor.name)}
-                </div>
+                {doctor.image ? (
+                  <img
+                    src={doctor.image}
+                    alt={doctor.name}
+                    className="h-20 w-20 shrink-0 rounded-full border-4 border-white object-cover object-top shadow-sm"
+                  />
+                ) : (
+                  <div
+                    aria-label={`${doctor.name} photo placeholder`}
+                    className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-4 border-white bg-teal-700 text-xl font-bold text-white shadow-sm"
+                  >
+                    {initials(doctor.name)}
+                  </div>
+                )}
                 <div>
                   <h3 className="font-bold text-gray-900">{doctor.name}</h3>
                   <p className="mt-1 text-sm font-medium text-blue-700">{doctor.specialization}</p>
@@ -49,12 +63,12 @@ function Doctors() {
                 )}
                 <a
                   href={`/appointment?doctor=${encodeURIComponent(doctor.name)}`}
-                  className="mt-6 inline-flex font-semibold text-blue-700 hover:text-blue-900"
+                  className="interactive-button mt-6 inline-flex font-semibold text-blue-700 hover:text-blue-900"
                 >
                   Book appointment <span aria-hidden="true" className="ml-1">→</span>
                 </a>
               </div>
-            </article>
+            </Reveal>
           ))}
         </div>
       </div>
