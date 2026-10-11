@@ -18,6 +18,13 @@ export const GET_DOCTORS = gql`
       name
       qualification
       specialization
+      image
+      services
+      availability {
+        days
+        startTime
+        endTime
+      }
       departmentId
       consultationFee
       isActive

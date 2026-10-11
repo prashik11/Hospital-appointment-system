@@ -1,5 +1,18 @@
+import { useQuery } from "@apollo/client/react";
 import { doctorProfiles } from "../data/doctors";
+import { GET_DOCTORS } from "../graphql/queries";
 import Reveal from "./Reveal";
+
+function formatTime(time) {
+  const [hour, minute] = time.split(":").map(Number);
+  const period = hour >= 12 ? "PM" : "AM";
+  return `${hour % 12 || 12}:${String(minute).padStart(2, "0")} ${period}`;
+}
+
+function formatAvailability(availability) {
+  if (!availability?.days?.length || !availability.startTime || !availability.endTime) return "";
+  return `${availability.days.join(" & ")} · ${formatTime(availability.startTime)} – ${formatTime(availability.endTime)}`;
+}
 
 function initials(name) {
   return name
@@ -12,6 +25,9 @@ function initials(name) {
 }
 
 function Doctors() {
+  const { data: doctorData } = useQuery(GET_DOCTORS);
+  const savedDoctors = doctorData?.doctors || [];
+
   return (
     <section id="doctors" className="bg-white py-20">
       <div className="mx-auto max-w-7xl px-6">
@@ -24,8 +40,11 @@ function Doctors() {
         </div>
 
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {doctorProfiles.map((doctor, index) => (
-            <Reveal
+          {doctorProfiles.map((doctor, index) => {
+            const savedDoctor = savedDoctors.find((item) => item.name === doctor.name);
+            const scheduleText = formatAvailability(savedDoctor?.availability || doctor.availability);
+            return (
+              <Reveal
               as="article"
               key={doctor.name}
               delay={(index % 3) * 90}
@@ -53,6 +72,12 @@ function Doctors() {
               </div>
               <div className="p-6">
                 <p className="text-sm text-gray-600">{doctor.qualification}</p>
+                {scheduleText && (
+                  <div className="mt-4 rounded-lg bg-blue-50 px-3 py-2.5 text-sm">
+                    <p className="font-semibold text-gray-900">Consultation hours</p>
+                    <p className="mt-1 text-gray-600">{scheduleText}</p>
+                  </div>
+                )}
                 {doctor.services.length > 0 && (
                   <>
                     <h4 className="mt-5 text-sm font-semibold text-gray-900">Areas of care</h4>
@@ -68,8 +93,9 @@ function Doctors() {
                   Book appointment <span aria-hidden="true" className="ml-1">→</span>
                 </a>
               </div>
-            </Reveal>
-          ))}
+              </Reveal>
+            );
+          })}
         </div>
       </div>
     </section>

@@ -12,9 +12,24 @@ const typeDefs = `#graphql
     name: String!
     qualification: String
     specialization: String!
+    image: String
+    services: [String!]!
+    availability: DoctorAvailability
     departmentId: ID!
     consultationFee: Float!
     isActive: Boolean!
+  }
+
+  type DoctorAvailability {
+    days: [String!]!
+    startTime: String!
+    endTime: String!
+  }
+
+  input DoctorAvailabilityInput {
+    days: [String!]!
+    startTime: String!
+    endTime: String!
   }
 
    type Patient {
@@ -87,8 +102,16 @@ type LoginResponse {
       name: String!
       qualification: String
       specialization: String!
+      image: String
+      services: [String!]
+      availability: DoctorAvailabilityInput
       departmentId: ID!
       consultationFee: Float
+    ): Doctor!
+
+    updateDoctorAvailability(
+      doctorId: ID!
+      availability: DoctorAvailabilityInput!
     ): Doctor!
 
     createAppointment(

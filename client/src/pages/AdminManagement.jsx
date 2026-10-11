@@ -3,12 +3,45 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import { useNavigate } from "react-router-dom";
 
 import { GET_DEPARTMENTS, GET_DOCTORS } from "../graphql/queries";
+import { doctorProfiles } from "../data/doctors";
 
 import {
   CREATE_DEPARTMENT,
   CREATE_DOCTOR,
   CHANGE_ADMIN_PASSWORD,
+  UPDATE_DOCTOR_AVAILABILITY,
 } from "../graphql/mutations";
+
+const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+function DaySelector({ selectedDays, onChange }) {
+  const toggleDay = (day) => {
+    onChange(selectedDays.includes(day)
+      ? selectedDays.filter((selectedDay) => selectedDay !== day)
+      : [...selectedDays, day]);
+  };
+
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {WEEKDAYS.map((day) => (
+        <label key={day} className="flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" checked={selectedDays.includes(day)} onChange={() => toggleDay(day)} />
+          {day}
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function formatSchedule(availability) {
+  if (!availability?.days?.length || !availability.startTime || !availability.endTime) return "Schedule not set";
+  const formatTime = (time) => {
+    const [hour, minute] = time.split(":").map(Number);
+    const period = hour >= 12 ? "PM" : "AM";
+    return `${hour % 12 || 12}:${String(minute).padStart(2, "0")} ${period}`;
+  };
+  return `${availability.days.join(" & ")} · ${formatTime(availability.startTime)} – ${formatTime(availability.endTime)}`;
+}
 
 function AdminManagement() {
   const navigate = useNavigate();
@@ -22,6 +55,8 @@ function AdminManagement() {
 
   const [createDoctor, { loading: creatingDoctor }] =
     useMutation(CREATE_DOCTOR);
+  const [updateDoctorAvailability, { loading: updatingAvailability }] =
+    useMutation(UPDATE_DOCTOR_AVAILABILITY);
   const [changeAdminPassword, { loading: changingPassword, error: passwordError }] =
     useMutation(CHANGE_ADMIN_PASSWORD);
 
@@ -34,9 +69,16 @@ function AdminManagement() {
     name: "",
     qualification: "",
     specialization: "",
+    image: "",
+    servicesText: "",
+    availabilityDays: [],
+    startTime: "",
+    endTime: "",
     departmentId: "",
     consultationFee: "",
   });
+  const [editingSchedule, setEditingSchedule] = useState(null);
+  const [scheduleError, setScheduleError] = useState("");
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
 
   const handleDepartmentSubmit = async (event) => {
@@ -78,6 +120,14 @@ function AdminManagement() {
 
           specialization: doctor.specialization.trim(),
 
+          image: doctor.image.trim() || null,
+
+          services: doctor.servicesText.split("\n").map((service) => service.trim()).filter(Boolean),
+
+          availability: doctor.availabilityDays.length
+            ? { days: doctor.availabilityDays, startTime: doctor.startTime, endTime: doctor.endTime }
+            : null,
+
           departmentId: doctor.departmentId,
 
           consultationFee: Number(doctor.consultationFee || 0),
@@ -88,6 +138,11 @@ function AdminManagement() {
         name: "",
         qualification: "",
         specialization: "",
+        image: "",
+        servicesText: "",
+        availabilityDays: [],
+        startTime: "",
+        endTime: "",
         departmentId: "",
         consultationFee: "",
       });
@@ -95,6 +150,38 @@ function AdminManagement() {
       await refetchDoctors();
     } catch (error) {
       console.error("Doctor creation failed:", error);
+    }
+  };
+
+  const beginScheduleEdit = (doctor) => {
+    const availability = doctor.availability || doctorProfiles.find((profile) => profile.name === doctor.name)?.availability || {};
+    setScheduleError("");
+    setEditingSchedule({
+      doctorId: doctor.id,
+      days: availability.days || [],
+      startTime: availability.startTime || "",
+      endTime: availability.endTime || "",
+    });
+  };
+
+  const handleScheduleSave = async (event) => {
+    event.preventDefault();
+    setScheduleError("");
+    try {
+      await updateDoctorAvailability({
+        variables: {
+          doctorId: editingSchedule.doctorId,
+          availability: {
+            days: editingSchedule.days,
+            startTime: editingSchedule.startTime,
+            endTime: editingSchedule.endTime,
+          },
+        },
+      });
+      await refetchDoctors();
+      setEditingSchedule(null);
+    } catch (error) {
+      setScheduleError(error.message || "Could not update the doctor's schedule.");
     }
   };
 
@@ -181,7 +268,7 @@ function AdminManagement() {
           >
             <input
               type="text"
-              placeholder="Department name"
+              placeholder="Department name (e.g. General Medicine)"
               value={department.name}
               onChange={(event) =>
                 setDepartment((previous) => ({
@@ -241,7 +328,7 @@ function AdminManagement() {
 
             <input
               type="text"
-              placeholder="Qualification"
+              placeholder="Qualification (e.g. MBBS, MD)"
               value={doctor.qualification}
               onChange={(event) =>
                 setDoctor((previous) => ({
@@ -254,7 +341,7 @@ function AdminManagement() {
 
             <input
               type="text"
-              placeholder="Specialization"
+              placeholder="Specialization shown on doctor card"
               value={doctor.specialization}
               onChange={(event) =>
                 setDoctor((previous) => ({
@@ -265,6 +352,43 @@ function AdminManagement() {
               required
               className="rounded-lg border px-4 py-3"
             />
+
+            <input
+              type="text"
+              placeholder="Photo path or HTTPS URL (optional)"
+              value={doctor.image}
+              onChange={(event) => setDoctor((previous) => ({ ...previous, image: event.target.value }))}
+              className="rounded-lg border px-4 py-3"
+            />
+
+            <textarea
+              placeholder="Areas of care — one item per line"
+              value={doctor.servicesText}
+              onChange={(event) => setDoctor((previous) => ({ ...previous, servicesText: event.target.value }))}
+              rows={4}
+              className="rounded-lg border px-4 py-3 md:col-span-2"
+            />
+
+            <fieldset className="rounded-lg border p-4 md:col-span-2">
+              <legend className="px-1 text-sm font-semibold text-gray-700">Consultation schedule (optional)</legend>
+              <p className="mb-3 text-sm text-gray-500">Select consultation days and enter the clinic hours.</p>
+              <DaySelector
+                selectedDays={doctor.availabilityDays}
+                onChange={(days) => setDoctor((previous) => ({ ...previous, availabilityDays: days }))}
+              />
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <label className="text-sm text-gray-600">From
+                  <input type="time" value={doctor.startTime} required={doctor.availabilityDays.length > 0}
+                    onChange={(event) => setDoctor((previous) => ({ ...previous, startTime: event.target.value }))}
+                    className="mt-1 block w-full rounded-lg border px-4 py-3" />
+                </label>
+                <label className="text-sm text-gray-600">To
+                  <input type="time" value={doctor.endTime} required={doctor.availabilityDays.length > 0}
+                    onChange={(event) => setDoctor((previous) => ({ ...previous, endTime: event.target.value }))}
+                    className="mt-1 block w-full rounded-lg border px-4 py-3" />
+                </label>
+              </div>
+            </fieldset>
 
             <select
               value={doctor.departmentId}
@@ -320,9 +444,11 @@ function AdminManagement() {
               const department = departments.find(
                 (item) => item.id === doctor.departmentId,
               );
+              const availability = doctor.availability || doctorProfiles.find((profile) => profile.name === doctor.name)?.availability;
 
               return (
                 <div key={doctor.id} className="admin-doctor-row rounded-xl border p-4">
+                  {doctor.image && <img src={doctor.image} alt="" className="mb-3 h-16 w-16 rounded-full object-cover object-top" />}
                   <p className="font-semibold">{doctor.name}</p>
 
                   <p className="text-sm text-gray-500">
@@ -336,6 +462,51 @@ function AdminManagement() {
                   <p className="text-sm text-gray-500">
                     Department: {department?.name || "Unknown"}
                   </p>
+
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm text-gray-600">Consultation: {formatSchedule(availability)}</p>
+                    <button type="button" onClick={() => beginScheduleEdit(doctor)}
+                      className="rounded-lg border border-blue-200 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50">
+                      Edit timing
+                    </button>
+                  </div>
+
+                  {editingSchedule?.doctorId === doctor.id && (
+                    <form onSubmit={handleScheduleSave} className="mt-4 space-y-4 rounded-xl bg-blue-50 p-4">
+                      <p className="font-semibold text-gray-800">Edit consultation timing</p>
+                      <DaySelector
+                        selectedDays={editingSchedule.days}
+                        onChange={(days) => setEditingSchedule((previous) => ({ ...previous, days }))}
+                      />
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="text-sm text-gray-600">From
+                          <input type="time" value={editingSchedule.startTime} required
+                            onChange={(event) => setEditingSchedule((previous) => ({ ...previous, startTime: event.target.value }))}
+                            className="mt-1 block w-full rounded-lg border bg-white px-4 py-3" />
+                        </label>
+                        <label className="text-sm text-gray-600">To
+                          <input type="time" value={editingSchedule.endTime} required
+                            onChange={(event) => setEditingSchedule((previous) => ({ ...previous, endTime: event.target.value }))}
+                            className="mt-1 block w-full rounded-lg border bg-white px-4 py-3" />
+                        </label>
+                      </div>
+                      {scheduleError && <p role="alert" className="text-sm text-red-700">{scheduleError}</p>}
+                      <div className="flex gap-2">
+                        <button type="submit" disabled={updatingAvailability}
+                          className="rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white disabled:bg-gray-400">
+                          {updatingAvailability ? "Saving..." : "Save timing"}
+                        </button>
+                        <button type="button" onClick={() => setEditingSchedule(null)}
+                          className="rounded-lg border px-4 py-2 font-semibold text-gray-700">Cancel</button>
+                      </div>
+                    </form>
+                  )}
+
+                  {doctor.services?.length > 0 && (
+                    <p className="mt-2 text-sm text-gray-500">
+                      Areas of care: {doctor.services.join(" • ")}
+                    </p>
+                  )}
 
                   <p className="text-sm text-gray-500">
                     Fee: ₹{doctor.consultationFee}

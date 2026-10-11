@@ -19,6 +19,7 @@ export const doctorProfiles = [
     qualification: "MBBS, MD (Neuropsychiatry); Fellowship in De-addiction, JJ Hospital, Mumbai",
     specialization: "Neuropsychiatry & De-addiction",
     department: "Neuropsychiatry",
+    availability: { days: ["Wednesday"], startTime: "18:00", endTime: "20:00" },
     services: ["Depression and sadness", "Anxiety and restlessness", "Sexual health concerns", "Suicidal thoughts", "Alcohol, marijuana, tobacco and cigarette addiction", "Sleep problems", "Fits, epilepsy, seizures and dizziness"],
   },
   {
@@ -27,6 +28,7 @@ export const doctorProfiles = [
     qualification: "MBBS, MD — Orthopaedic Surgeon",
     specialization: "Orthopaedics & Joint Replacement",
     department: "Orthopaedics",
+    availability: { days: ["Monday"], startTime: "18:00", endTime: "20:00" },
     services: ["Knee and joint replacement", "Bone diseases", "Joint pain and fractures", "Knee, back and neck pain", "Sports injuries", "Orthopaedic surgery"],
   },
   {
@@ -35,6 +37,7 @@ export const doctorProfiles = [
     qualification: "MBBS, MD — Paediatric Cardiologist",
     specialization: "Paediatrics & Paediatric Cardiology",
     department: "Paediatrics",
+    availability: { days: ["Sunday"], startTime: "11:00", endTime: "14:00" },
     services: ["Child health", "NICU and PICU care", "Vaccination", "Paediatric heart care", "Infectious diseases", "Growth and health concerns in young children"],
   },
   {
@@ -43,6 +46,7 @@ export const doctorProfiles = [
     qualification: "MBBS, MD; Fellowship in 2-D Echo",
     specialization: "General Medicine",
     department: "General Medicine",
+    availability: { days: ["Thursday", "Friday"], startTime: "14:00", endTime: "16:00" },
     services: ["Diabetes", "Blood pressure", "Thyroid conditions", "Asthma", "General medical care"],
   },
   {
@@ -51,6 +55,7 @@ export const doctorProfiles = [
     qualification: "MBBS, MD — Dermatology, Venereology & Leprosy",
     specialization: "Dermatology, Hair & Skin",
     department: "Dermatology",
+    availability: { days: ["Saturday"], startTime: "14:00", endTime: "16:00" },
     services: ["Skin and hair conditions", "Fungal infections", "Acne and pimples", "Skin allergies", "Hair fall and dandruff", "Platelet-rich plasma (PRP)", "Hair transplant", "Psoriasis and eczema"],
   },
   {
@@ -59,6 +64,7 @@ export const doctorProfiles = [
     qualification: "MBBS, MS — General & Laparoscopic Surgeon",
     specialization: "General & Laparoscopic Surgery",
     department: "General Surgery",
+    availability: { days: ["Tuesday"], startTime: "15:00", endTime: "17:00" },
     services: ["Gallstones", "Appendix conditions", "Hernia", "Fistula procedures", "Laparoscopic surgery", "Bypass surgery", "General, cancer and other surgeries"],
   },
   {
@@ -67,6 +73,7 @@ export const doctorProfiles = [
     qualification: "MBBS, MS — ENT Specialist",
     specialization: "Ear, Nose & Throat (ENT)",
     department: "ENT",
+    availability: { days: ["Friday"], startTime: "14:00", endTime: "16:00" },
     services: ["Ear, nose and throat conditions", "Sinus and tonsil concerns", "Ear discharge and wounds", "Hearing loss", "Throat conditions", "Nosebleeds"],
   },
   {
