@@ -17,6 +17,27 @@ const { randomBytes } = require("node:crypto");
 const { consumeRateLimit } = require("../utils/rateLimit");
 const { validateText, validateAppointmentDateTime, validateObjectId, userInputError } = require("../utils/validation");
 
+const VALID_WEEKDAYS = new Set([
+  "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+]);
+
+function validateDoctorAvailability(value) {
+  if (!value || !Array.isArray(value.days) || value.days.length < 1 || value.days.length > 7) {
+    throw userInputError("Select at least one consultation day");
+  }
+  const days = [...new Set(value.days)];
+  if (days.length !== value.days.length || days.some((day) => !VALID_WEEKDAYS.has(day))) {
+    throw userInputError("Select valid, non-duplicate weekdays");
+  }
+  const startTime = validateText(value.startTime, "Start time", { max: 5 });
+  const endTime = validateText(value.endTime, "End time", { max: 5 });
+  const timePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+  if (!timePattern.test(startTime) || !timePattern.test(endTime) || endTime <= startTime) {
+    throw userInputError("Enter a valid time range; the end time must be after the start time");
+  }
+  return { days, startTime, endTime };
+}
+
 function rateLimitError() {
   return new GraphQLError("Too many requests. Please try again later.", {
     extensions: { code: "TOO_MANY_REQUESTS" },
@@ -170,6 +191,9 @@ const resolvers = {
         name,
         qualification,
         specialization,
+        image,
+        services,
+        availability,
         departmentId,
         consultationFee,
       } = args;
@@ -177,6 +201,17 @@ const resolvers = {
       const cleanName = validateText(name, "Doctor name", { max: 100 });
       const cleanQualification = validateText(qualification || "", "Qualification", { required: false, max: 100 });
       const cleanSpecialization = validateText(specialization, "Specialization", { max: 100 });
+      const cleanImage = validateText(image || "", "Photo URL", { required: false, max: 500 });
+      if (cleanImage && !/^https:\/\/(?!\/)/i.test(cleanImage) && !(cleanImage.startsWith("/") && !cleanImage.startsWith("//"))) {
+        throw userInputError("Photo URL must use HTTPS or be a site-relative path");
+      }
+      if (services != null && (!Array.isArray(services) || services.length > 20)) {
+        throw userInputError("Enter no more than 20 areas of care");
+      }
+      const cleanServices = (services || []).map((service) =>
+        validateText(service, "Area of care", { max: 120 }),
+      );
+      const cleanAvailability = availability ? validateDoctorAvailability(availability) : undefined;
       if (consultationFee != null && (!Number.isFinite(consultationFee) || consultationFee < 0)) {
         throw userInputError("Consultation fee must be a non-negative number");
       }
@@ -194,10 +229,25 @@ const resolvers = {
         name: cleanName,
         qualification: cleanQualification || undefined,
         specialization: cleanSpecialization,
+        image: cleanImage || undefined,
+        services: cleanServices,
+        availability: cleanAvailability,
         departmentId,
         consultationFee: consultationFee || 0,
       });
 
+      return doctor;
+    },
+
+    updateDoctorAvailability: async (_, { doctorId, availability }, context) => {
+      await getAuthAdmin(context.req);
+      const doctor = await Doctor.findOne({
+        _id: validateObjectId(doctorId, "Doctor ID"),
+        isActive: true,
+      });
+      if (!doctor) throw userInputError("Doctor not found or inactive");
+      doctor.availability = validateDoctorAvailability(availability);
+      await doctor.save();
       return doctor;
     },
 
