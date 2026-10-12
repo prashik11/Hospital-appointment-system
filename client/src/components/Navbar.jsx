@@ -13,6 +13,7 @@ function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
   const isHomePage = location.pathname === "/";
+  const isAppointmentPage = location.pathname === "/appointment";
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -51,12 +52,14 @@ function Navbar() {
               Admin Login
             </a>
           )}
-          <a
-            href="/appointment"
-            className="home-nav-action site-book-button interactive-button whitespace-nowrap rounded-lg bg-blue-600 font-semibold text-white hover:bg-blue-700"
-          >
-            Book Appointment
-          </a>
+          {!isAppointmentPage && (
+            <a
+              href="/appointment"
+              className="home-nav-action site-book-button interactive-button whitespace-nowrap rounded-lg bg-blue-600 font-semibold text-white hover:bg-blue-700"
+            >
+              Book Appointment
+            </a>
+          )}
           <button
             type="button"
             className="menu-toggle rounded-lg p-2 text-gray-700 hover:bg-gray-100 lg:hidden"
