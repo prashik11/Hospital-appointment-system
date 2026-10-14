@@ -30,19 +30,15 @@ function getStatusClasses(status) {
 
 function AdminAppointments() {
   const [hasMore, setHasMore] = useState(true);
-  const { loading, error, data, refetch, fetchMore } = useQuery(GET_APPOINTMENTS, {
+  const { loading, error, data, fetchMore } = useQuery(GET_APPOINTMENTS, {
     variables: { limit: 100, offset: 0 },
   });
 
   const navigate = useNavigate();
 
-  const [updateAppointmentStatus, { loading: updating }] = useMutation(
-    UPDATE_APPOINTMENT_STATUS,
-  );
+  const [updateAppointmentStatus] = useMutation(UPDATE_APPOINTMENT_STATUS);
 
-  const [updateAppointmentSchedule, { loading: rescheduling }] = useMutation(
-    UPDATE_APPOINTMENT_SCHEDULE,
-  );
+  const [updateAppointmentSchedule] = useMutation(UPDATE_APPOINTMENT_SCHEDULE);
   const [logoutAdmin] = useMutation(LOGOUT_ADMIN);
 
   const [notes, setNotes] = useState({});
@@ -51,6 +47,7 @@ function AdminAppointments() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+  const [activeAction, setActiveAction] = useState(null);
 
   const [rescheduleId, setRescheduleId] = useState(null);
 
@@ -60,6 +57,7 @@ function AdminAppointments() {
   });
 
   const handleStatusChange = async (appointmentId, status) => {
+    setActiveAction({ appointmentId, action: status });
     try {
       await updateAppointmentStatus({
         variables: {
@@ -69,19 +67,21 @@ function AdminAppointments() {
         },
       });
 
-      await refetch();
-      setHasMore(true);
-
+      // The mutation returns the changed appointment fields. Apollo updates its
+      // normalized cache, so the table row updates without reloading the query.
       setNotes((previousNotes) => ({
         ...previousNotes,
         [appointmentId]: "",
       }));
     } catch (error) {
       console.error("Status update failed:", error);
+    } finally {
+      setActiveAction(null);
     }
   };
 
   const handleReschedule = async (appointmentId) => {
+    setActiveAction({ appointmentId, action: "RESCHEDULE" });
     try {
       await updateAppointmentSchedule({
         variables: {
@@ -92,9 +92,7 @@ function AdminAppointments() {
         },
       });
 
-      await refetch();
-      setHasMore(true);
-
+      // Apollo applies the returned date, time and note directly to this row.
       setRescheduleId(null);
 
       setRescheduleData({
@@ -103,6 +101,8 @@ function AdminAppointments() {
       });
     } catch (error) {
       console.error("Reschedule failed:", error);
+    } finally {
+      setActiveAction(null);
     }
   };
 
@@ -118,7 +118,8 @@ function AdminAppointments() {
     }
   };
 
-  if (loading) {
+  // Keep the existing table visible while a refetch updates it after an action.
+  if (loading && !data) {
     return <div className="p-10 text-center">Loading appointments...</div>;
   }
 
@@ -355,7 +356,13 @@ function AdminAppointments() {
             </thead>
 
             <tbody>
-              {filteredAppointments.map((appointment) => (
+              {filteredAppointments.map((appointment) => {
+                const rowAction = activeAction?.appointmentId === appointment.id
+                  ? activeAction.action
+                  : null;
+                const rowBusy = Boolean(rowAction);
+                const isFinalStatus = ["COMPLETED", "CANCELLED"].includes(appointment.status);
+                return (
                 <tr key={appointment.id} className="admin-table-row border-t">
                   {/* APPOINTMENT NUMBER */}
                   <td className="px-4 py-4 font-semibold">
@@ -392,7 +399,7 @@ function AdminAppointments() {
                   <td className="px-4 py-4">{appointment.preferredTime}</td>
 
                   {/* REASON */}
-                  <td className="px-4 py-4">{appointment.reason || "—"}</td>
+                  <td className="px-4 py-4">{appointment.reason || <span className="text-gray-400">&mdash;</span>}</td>
 
                   {/* ADMIN NOTE */}
                   <td className="px-4 py-4">
@@ -401,7 +408,7 @@ function AdminAppointments() {
                         {appointment.adminNote}
                       </p>
                     ) : (
-                      <span className="text-gray-400">—</span>
+                      <span className="text-gray-400">&mdash;</span>
                     )}
                   </td>
 
@@ -418,20 +425,22 @@ function AdminAppointments() {
 
                   {/* ACTION */}
                   <td className="px-4 py-4">
-                    <div className="min-w-[280px] space-y-2">
-                      {/* ADMIN NOTE INPUT */}
-                      <input
-                        type="text"
-                        value={notes[appointment.id] || ""}
-                        onChange={(event) =>
-                          setNotes((previousNotes) => ({
-                            ...previousNotes,
-                            [appointment.id]: event.target.value,
-                          }))
-                        }
-                        placeholder="Admin note"
-                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-blue-600"
-                      />
+                    <div className={`${isFinalStatus ? "flex min-h-10 items-center whitespace-nowrap" : "min-w-[280px] space-y-2"}`}>
+                      {/* Notes can be entered while an appointment is active. */}
+                      {["PENDING", "CONFIRMED"].includes(appointment.status) && (
+                        <input
+                          type="text"
+                          value={notes[appointment.id] || ""}
+                          onChange={(event) =>
+                            setNotes((previousNotes) => ({
+                              ...previousNotes,
+                              [appointment.id]: event.target.value,
+                            }))
+                          }
+                          placeholder="Admin note"
+                          className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-blue-600"
+                        />
+                      )}
 
                       {/* ACTION BUTTONS */}
                       <div className="flex flex-wrap gap-2">
@@ -442,20 +451,20 @@ function AdminAppointments() {
                               onClick={() =>
                                 handleStatusChange(appointment.id, "CONFIRMED")
                               }
-                              disabled={updating}
+                              disabled={rowBusy}
                               className="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:bg-gray-400"
                             >
-                              Confirm
+                              {rowAction === "CONFIRMED" ? "Confirming..." : "Confirm"}
                             </button>
 
                             <button
                               onClick={() =>
                                 handleStatusChange(appointment.id, "CANCELLED")
                               }
-                              disabled={updating}
+                              disabled={rowBusy}
                               className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:bg-gray-400"
                             >
-                              Cancel
+                              {rowAction === "CANCELLED" ? "Cancelling..." : "Cancel"}
                             </button>
                           </>
                         )}
@@ -473,10 +482,10 @@ function AdminAppointments() {
                                 preferredTime: appointment.preferredTime,
                               });
                             }}
-                            disabled={updating || rescheduling}
+                            disabled={rowBusy}
                             className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:bg-gray-400"
                           >
-                            Reschedule
+                            {rowAction === "RESCHEDULE" ? "Rescheduling..." : "Reschedule"}
                           </button>
                         )}
 
@@ -486,13 +495,20 @@ function AdminAppointments() {
                             onClick={() =>
                               handleStatusChange(appointment.id, "COMPLETED")
                             }
-                            disabled={updating}
+                            disabled={rowBusy}
                             className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:bg-gray-400"
                           >
-                            Complete
+                            {rowAction === "COMPLETED" ? "Completing..." : "Complete"}
                           </button>
                         )}
                       </div>
+
+                      {isFinalStatus && (
+                        <span className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium ${appointment.status === "COMPLETED" ? "bg-blue-50 text-blue-700" : "bg-red-50 text-red-700"}`}>
+                          {appointment.status === "COMPLETED" ? "Appointment completed" : "Appointment cancelled"}
+                        </span>
+                      )}
+
 
                       {/* RESCHEDULE FORM */}
                       {rescheduleId === appointment.id && (
@@ -532,11 +548,11 @@ function AdminAppointments() {
                                 disabled={
                                   !rescheduleData.appointmentDate ||
                                   !rescheduleData.preferredTime ||
-                                  rescheduling
+                                  rowBusy
                                 }
                                 className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:bg-gray-400"
                               >
-                                {rescheduling ? "Saving..." : "Save"}
+                                {rowAction === "RESCHEDULE" ? "Saving..." : "Save"}
                               </button>
 
                               <button
@@ -559,7 +575,8 @@ function AdminAppointments() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
 

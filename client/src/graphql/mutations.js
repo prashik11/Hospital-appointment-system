@@ -131,6 +131,9 @@ export const CREATE_DOCTOR = gql`
     $name: String!
     $qualification: String
     $specialization: String!
+    $image: String
+    $services: [String!]
+    $availability: DoctorAvailabilityInput
     $departmentId: ID!
     $consultationFee: Float
   ) {
@@ -138,6 +141,9 @@ export const CREATE_DOCTOR = gql`
       name: $name
       qualification: $qualification
       specialization: $specialization
+      image: $image
+      services: $services
+      availability: $availability
       departmentId: $departmentId
       consultationFee: $consultationFee
     ) {
@@ -145,9 +151,29 @@ export const CREATE_DOCTOR = gql`
       name
       qualification
       specialization
+      image
+      services
+      availability {
+        days
+        startTime
+        endTime
+      }
       departmentId
       consultationFee
       isActive
+    }
+  }
+`;
+
+export const UPDATE_DOCTOR_AVAILABILITY = gql`
+  mutation UpdateDoctorAvailability($doctorId: ID!, $availability: DoctorAvailabilityInput!) {
+    updateDoctorAvailability(doctorId: $doctorId, availability: $availability) {
+      id
+      availability {
+        days
+        startTime
+        endTime
+      }
     }
   }
 `;
