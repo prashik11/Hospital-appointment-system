@@ -354,9 +354,7 @@ const resolvers = {
       // ------------------------------------------
       // 8. Generate appointment number
       // ------------------------------------------
-      const appointmentNumber = `APT-${Date.now()}-${randomBytes(3)
-        .toString("hex")
-        .toUpperCase()}`;
+      const appointmentNumber = `APT-${randomBytes(8).toString("base64url")}`;
 
       // ------------------------------------------
       // 9. Create appointment
