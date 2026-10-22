@@ -130,9 +130,9 @@ function Appointment() {
     <>
       <Navbar />
 
-      <main className="min-h-screen bg-gray-50 py-12">
+      <main className="appointment-page min-h-screen bg-gray-50 py-12">
         <div className="mx-auto max-w-4xl px-6">
-          <div className="text-center">
+          <div className="appointment-page-heading text-center">
             <p className="font-semibold text-blue-600">BOOK APPOINTMENT</p>
 
             <h1 className="mt-2 text-3xl font-bold text-gray-900">
@@ -147,17 +147,17 @@ function Appointment() {
 
           {successData && (
             <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+              className="appointment-print-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
               role="presentation"
             >
               <section
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="appointment-success-title"
-                className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-8 shadow-lg"
+                className="appointment-print-card max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-8 shadow-lg"
               >
                 <div className="text-center">
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-3xl">
+                  <div className="appointment-print-success-icon mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-3xl">
                     ✓
                   </div>
 
@@ -212,13 +212,32 @@ function Appointment() {
                   registered mobile number to confirm the appointment.
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setSuccessData(null)}
-                  className="mt-6 w-full rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"
-                >
-                  Close
-                </button>
+                <div className="appointment-print-actions mt-6 grid gap-3 sm:grid-cols-3">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="rounded-lg border border-blue-200 px-4 py-3 font-semibold text-blue-700 hover:bg-blue-50"
+                  >
+                    Print
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700"
+                  >
+                    Download PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSuccessData(null)}
+                    className="rounded-lg border border-gray-200 px-4 py-3 font-semibold text-gray-700 hover:bg-gray-50"
+                  >
+                    Close
+                  </button>
+                </div>
+                <p className="appointment-print-actions mt-2 text-center text-xs text-gray-500">
+                  To save as PDF, select Save as PDF in the print window.
+                </p>
               </section>
             </div>
           )}
