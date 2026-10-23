@@ -1,8 +1,8 @@
 services:
   - type: web
-    name: shree-pharma-clinic-demo
+    name: shree-pharma-clinic
     runtime: node
-    plan: free
+    plan: standard
     buildCommand: npm ci --prefix client --include=dev && npm ci --prefix server --omit=dev && npm run build --prefix client
     startCommand: npm start --prefix server
     healthCheckPath: /healthz
