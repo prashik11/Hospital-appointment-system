@@ -1,8 +1,9 @@
 services:
   - type: web
-    name: shree-pharma-clinic
+    name: shree-pharma-clinic-dev
     runtime: node
-    plan: standard
+    plan: free
+    branch: dev
     buildCommand: npm ci --prefix client --include=dev && npm ci --prefix server --omit=dev && npm run build --prefix client
     startCommand: npm start --prefix server
     healthCheckPath: /healthz
@@ -15,5 +16,7 @@ services:
         value: /graphql
       - key: HOSPITAL_TIME_ZONE
         value: Asia/Kolkata
+      - key: TRUST_PROXY
+        value: "1"
       - key: MONGO_URI
         sync: false
