@@ -29,6 +29,7 @@ if (process.env.DNS_SERVERS) {
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const HOST = process.env.HOST || "0.0.0.0";
 const CLIENT_BUILD_DIR = path.resolve(__dirname, "../../client/dist");
 const isProduction = process.env.NODE_ENV === "production";
 const configuredOrigins = (process.env.CLIENT_ORIGIN || process.env.RENDER_EXTERNAL_URL || (isProduction ? "" : "http://localhost:5173"))
@@ -103,6 +104,12 @@ app.use((req, res, next) => {
   res.set("X-Frame-Options", "DENY");
   res.set("Referrer-Policy", "no-referrer");
   res.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  if (isProduction) {
+    res.set(
+      "Content-Security-Policy",
+      "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self' data:; connect-src 'self'; upgrade-insecure-requests",
+    );
+  }
   res.set("Cache-Control", "no-store");
   res.set("Pragma", "no-cache");
   if (isProduction) res.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
@@ -179,7 +186,7 @@ async function startServer() {
     });
   });
 
-  app.listen(PORT, "0.0.0.0", () => {
+  app.listen(PORT, HOST, () => {
     console.log(`Server running on port ${PORT}`);
     console.log("GraphQL endpoint is ready");
   });

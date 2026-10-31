@@ -27,6 +27,7 @@ function initials(name) {
 function Doctors() {
   const { data: doctorData } = useQuery(GET_DOCTORS);
   const savedDoctors = doctorData?.doctors || [];
+  const doctors = savedDoctors.length ? savedDoctors : doctorProfiles;
 
   return (
     <section id="doctors" className="bg-white py-20">
@@ -40,9 +41,8 @@ function Doctors() {
         </div>
 
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {doctorProfiles.map((doctor, index) => {
-            const savedDoctor = savedDoctors.find((item) => item.name === doctor.name);
-            const scheduleText = formatAvailability(savedDoctor?.availability || doctor.availability);
+          {doctors.map((doctor, index) => {
+            const scheduleText = formatAvailability(doctor.availability);
             return (
               <Reveal
               as="article"
