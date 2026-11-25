@@ -14,6 +14,8 @@ Never commit `.env` files. The server and client ignore them; only the `.env.exa
 
 ## Production configuration
 
+See [`DEPLOYMENT.md`](DEPLOYMENT.md) for the separate Render `dev` and VPS `main` setup, secret handling, DNS, Nginx, HTTPS, and systemd deployment files.
+
 Set these server variables in the hosting provider's secret/configuration panel:
 
 - `NODE_ENV=production`
