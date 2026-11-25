@@ -20,6 +20,25 @@ const { validateText, validateAppointmentDateTime, validateObjectId, userInputEr
 const VALID_WEEKDAYS = new Set([
   "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
 ]);
+const WEEKDAYS_BY_UTC_DAY = [
+  "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+];
+
+function validateAppointmentAgainstAvailability(doctor, appointmentDate, preferredTime) {
+  if (!doctor.availability) return;
+
+  const date = new Date(`${appointmentDate}T00:00:00.000Z`);
+  const weekday = WEEKDAYS_BY_UTC_DAY[date.getUTCDay()];
+  if (!doctor.availability.days.includes(weekday)) {
+    throw userInputError(`This doctor is not available on ${weekday}`);
+  }
+  if (
+    preferredTime < doctor.availability.startTime ||
+    preferredTime >= doctor.availability.endTime
+  ) {
+    throw userInputError("Selected time is outside this doctor's consultation hours");
+  }
+}
 
 function validateDoctorAvailability(value) {
   if (!value || !Array.isArray(value.days) || value.days.length < 1 || value.days.length > 7) {
@@ -325,6 +344,8 @@ const resolvers = {
         throw userInputError("Selected doctor does not belong to this department");
       }
 
+      validateAppointmentAgainstAvailability(doctor, appointmentDate, preferredTime);
+
       // ------------------------------------------
       // 6. Check duplicate doctor slot
       // ------------------------------------------
@@ -490,6 +511,10 @@ const resolvers = {
       ) {
         throw userInputError("This appointment cannot be rescheduled");
       }
+
+      const doctor = await Doctor.findOne({ _id: appointment.doctorId, isActive: true });
+      if (!doctor) throw userInputError("Doctor not found or inactive");
+      validateAppointmentAgainstAvailability(doctor, appointmentDate, preferredTime);
 
       // ------------------------------------------
       // 6. Check duplicate slot
